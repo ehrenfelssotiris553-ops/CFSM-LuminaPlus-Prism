@@ -37,7 +37,7 @@ function regionRank(code: string): number {
  * → 新加坡 → 日本 → 美国 → 欧洲诸国 → 其余。同一档内(欧洲/其余)再按数量降序、代码升序。
  */
 export function getHomeRegionOptions(
-  nodes: HomeNodeSummary[],
+  nodes: ReadonlyArray<Pick<HomeNodeSummary, "region">>,
   order: readonly string[] = [],
 ): HomeRegionOption[] {
   const counts = new Map<string, number>();

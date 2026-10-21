@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ScopeBadge } from "@/components/theme/SettingsParts";
 import { EyeOff } from "lucide-react";
 import { t } from "@/i18n";
 import { InstancePanel } from "@/components/instance/InstancePanel";
@@ -50,7 +51,7 @@ export function PingDisplayEditor({ settings, clients, tasks, loading, lineOverr
   const [search, setSearch] = useState("");
   const filtered = clients.filter((client) => [client.name, client.uuid, client.group, client.region].join(" ").toLowerCase().includes(search.trim().toLowerCase()));
   const hasOverrides = Object.keys(settings.homepagePingGroupOverrides).length > 0 || Object.keys(settings.homepagePingVisibilityOverrides).length > 0;
-  return <InstancePanel id="set-ping-visibility" kicker={t("settings.kickerLines")} title={t("settings.pingVisibilityTitle")} aside={<EyeOff size={16} />}>
+  return <InstancePanel id="set-ping-visibility" titleAction={<ScopeBadge kind="site" />} title={t("settings.pingVisibilityTitle")} aside={<EyeOff size={16} />}>
     <p className="setting-hint mb-3">{t("settings.pingVisibilityHint")}</p>
     <div className="grid gap-3 sm:grid-cols-2">
       <SettingToggle title={t("settings.showPingIpv4")} checked={settings.showPingIpv4} onChange={(checked) => onChange({ showPingIpv4: checked })} />

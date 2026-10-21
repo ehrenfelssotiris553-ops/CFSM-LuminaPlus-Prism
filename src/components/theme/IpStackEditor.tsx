@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { ScopeBadge } from "@/components/theme/SettingsParts";
 import { Network } from "lucide-react";
 import { t } from "@/i18n";
 import { InstancePanel } from "@/components/instance/InstancePanel";
@@ -125,7 +126,7 @@ export function IpStackEditor({
   return (
     <InstancePanel
       id="set-ip-stack"
-      kicker={t("settings.kickerCard")}
+      titleAction={<ScopeBadge kind="site" />}
       title={t("settings.ipStackTitle")}
       aside={<Network size={16} />}
     >

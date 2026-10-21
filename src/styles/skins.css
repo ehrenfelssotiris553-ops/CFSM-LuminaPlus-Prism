@@ -182,7 +182,7 @@
 }
 
 /* 毛玻璃只给总览、站长条和筛选栏：数量少，手机上也不卡；几十张机器卡片不加。 */
-:root[data-skin="frost"] :is(.overview-card, .home-overview-strip, .owner-strip, .home-region-bar, .home-filter) {
+:root[data-skin="frost"] :is(.overview-card, .home-overview-strip, .owner-strip, .home-filter) {
   background: var(--surface-a);
   box-shadow: var(--skin-card-shadow);
   backdrop-filter: blur(18px) saturate(160%);

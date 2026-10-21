@@ -1,7 +1,5 @@
-import { useMemo } from "react";
 import { t, type MessageKey } from "@/i18n";
 import { SettingToggle } from "@/components/theme/SettingControls";
-import { useVisibleNodes } from "@/hooks/useVisibleNodes";
 import { MASK_FIELDS, type MaskField, type MaskFields, type MaskMode } from "@/utils/screenshotMask";
 
 const FIELD_LABEL_KEYS: Record<MaskField, MessageKey> = {
@@ -27,13 +25,14 @@ export interface MaskSettingsValue {
  */
 export function ScreenshotMaskSettings({
   value,
+  nodes: sorted,
   onChange,
 }: {
   value: MaskSettingsValue;
+  /** 设置页已经拉好、排好序的节点列表（不为这里去连实时数据）。 */
+  nodes: readonly { uuid: string; name: string }[];
   onChange: (patch: Partial<MaskSettingsValue>) => void;
 }) {
-  const nodes = useVisibleNodes();
-  const sorted = useMemo(() => [...nodes].sort((left, right) => left.weight - right.weight), [nodes]);
   const selected = new Set(value.screenshotMaskNodes);
   const count = sorted.filter((node) => selected.has(node.uuid)).length;
   const allPicked = sorted.length > 0 && count === sorted.length;

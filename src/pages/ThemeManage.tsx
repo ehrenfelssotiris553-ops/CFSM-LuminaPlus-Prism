@@ -128,7 +128,6 @@ import { LATENCY_STYLE_OPTIONS, LAYOUT_PAIRS } from "@/utils/layouts";
 import { LatencyThumb, LayoutThumb, OptionCard } from "@/components/ui/OptionCards";
 import { OwnerOnlyNotice, ScopeBadge, SettingsPreview, SettingsSearch, type SettingsIndexEntry } from "@/components/theme/SettingsParts";
 import { RegionTabs } from "@/components/node/RegionTabs";
-import { useHomeNodeSummaries } from "@/hooks/useNode";
 import { clearViewModeOverrides } from "@/hooks/useViewMode";
 import {
   getDefaultOverviewRatingLabelText,
@@ -951,7 +950,7 @@ const SETTINGS_INDEX: readonly SettingsIndexEntry[] = [
   { id: "set-quick-controls", tab: "home", title: "settings.quickButtons", words: ["settings.quickViewMode", "settings.quickColors", "settings.quickMask"] },
   { id: "set-ping", tab: "ping", title: "settings.homeLatency", words: ["settings.showTheseLines", "settings.defaultLine"] },
   { id: "set-ping-bindings", tab: "ping", title: "settings.perNodeLine" },
-  { id: "set-ping-display", tab: "ping", title: "settings.pingVisibilityTitle", words: ["settings.showPingIpv4", "settings.showPingIpv6"] },
+  { id: "set-ping-visibility", tab: "ping", title: "settings.pingVisibilityTitle", words: ["settings.showPingIpv4", "settings.showPingIpv6"] },
   { id: "set-screenshot-mask", tab: "privacy", title: "mask.title", words: ["mask.visitors", "mask.fieldsTitle", "mask.modeTitle"] },
   { id: "set-visitor-costs", tab: "privacy", title: "settings.visitorCosts", words: ["settings.showAssetOverview", "settings.showCardPrice", "settings.showCostSummary"] },
   { id: "set-hidden", tab: "privacy", title: "settings.hiddenNodes" },
@@ -1226,12 +1225,6 @@ export function ThemeManage() {
     },
     [openTab],
   );
-  // 地区顺序在设置页拖：地区和数量来自首页同一份节点数据。
-  const homeNodeSummaries = useHomeNodeSummaries();
-  const regionChoices = useMemo(
-    () => getHomeRegionOptions(homeNodeSummaries, draft.homeRegionOrder),
-    [homeNodeSummaries, draft.homeRegionOrder],
-  );
 
   const toggleTaskExpanded = useCallback((taskId: number) => {
     setExpandedTaskId((current) => (current === taskId ? null : taskId));
@@ -1349,6 +1342,11 @@ export function ThemeManage() {
     Math.max(sortedTasks.length, HOMEPAGE_MULTI_PING_MIN_COUNT),
   );
   const sortedClients = useMemo(() => sortClients(adminClients ?? []), [adminClients]);
+  // 地区顺序在设置页拖：地区和数量用设置页本来就拉的节点列表算，不为它去连实时数据（设置页开着不该多占连接时长）。
+  const regionChoices = useMemo(
+    () => getHomeRegionOptions(sortedClients, draft.homeRegionOrder),
+    [sortedClients, draft.homeRegionOrder],
+  );
   const clientsById = useMemo(
     () => new Map(sortedClients.map((client) => [client.uuid, client])),
     [sortedClients],
@@ -2064,17 +2062,15 @@ export function ThemeManage() {
                   </div>
                 </div>
               </InstancePanel>
-              <div id="set-ip-stack">
-                <IpStackEditor
-                  settings={draft}
-                  clients={sortedClients}
-                  loading={clientsLoading}
-                  onChange={(updates) => {
-                    editVersionRef.current += 1;
-                    setDraft((previous) => ({ ...previous, ...updates }));
-                  }}
-                />
-              </div>
+              <IpStackEditor
+                settings={draft}
+                clients={sortedClients}
+                loading={clientsLoading}
+                onChange={(updates) => {
+                  editVersionRef.current += 1;
+                  setDraft((previous) => ({ ...previous, ...updates }));
+                }}
+              />
             </>
           )}
 
@@ -2810,20 +2806,18 @@ export function ThemeManage() {
 
                 </div>
               </InstancePanel>
-              <div id="set-ping-display">
-                <PingDisplayEditor
-                  settings={draft}
-                  clients={sortedClients}
-                  tasks={sortedTasks}
-                  loading={clientsLoading}
-                  lineOverrides={sourceThemeSettings.homepagePingLineOverrides}
-                  localLineOverrides={localLineOverrides}
-                  onChange={(updates) => {
-                    editVersionRef.current += 1;
-                    setDraft((previous) => ({ ...previous, ...updates }));
-                  }}
-                />
-              </div>
+              <PingDisplayEditor
+                settings={draft}
+                clients={sortedClients}
+                tasks={sortedTasks}
+                loading={clientsLoading}
+                lineOverrides={sourceThemeSettings.homepagePingLineOverrides}
+                localLineOverrides={localLineOverrides}
+                onChange={(updates) => {
+                  editVersionRef.current += 1;
+                  setDraft((previous) => ({ ...previous, ...updates }));
+                }}
+              />
             </>
           )}
 
@@ -2838,6 +2832,7 @@ export function ThemeManage() {
               >
                 <ScreenshotMaskSettings
                   value={draft}
+                  nodes={sortedClients}
                   onChange={(updates) => {
                     editVersionRef.current += 1;
                     setDraft((previous) => ({ ...previous, ...updates }));
