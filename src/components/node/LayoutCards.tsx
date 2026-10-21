@@ -179,7 +179,7 @@ function Meter({ label, value, color, text }: { label: string; value: number; co
         </b>
       </span>
       <span className="lc-track" aria-hidden>
-        <span style={{ width: `${clampPct(value)}%`, background: color }} />
+        <span style={{ "--lc-fill": clampPct(value) / 100, background: color } as CSSProperties} />
       </span>
     </div>
   );
@@ -191,7 +191,7 @@ function TrafficLine({ model }: { model: ReadyModel }) {
     <div className="lc-traffic" title={traffic.tooltip}>
       <span className="lc-label">{t("card.traffic")}</span>
       <span className="lc-track" aria-hidden>
-        <span style={{ width: `${clampPct(traffic.fraction * 100)}%`, background: traffic.color }} />
+        <span style={{ "--lc-fill": clampPct(traffic.fraction * 100) / 100, background: traffic.color } as CSSProperties} />
       </span>
       <span className="lc-traffic-value tabular">{traffic.detail}</span>
     </div>

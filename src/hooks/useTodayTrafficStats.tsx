@@ -18,7 +18,7 @@ import {
 import { useMinuteClock } from "@/hooks/useClock";
 import {
   getTodayTrafficRecordRangeHours,
-  getTodayTrafficRefreshInterval,
+  TODAY_TRAFFIC_STALE_MS,
   selectActiveTodayTrafficUuids,
 } from "@/hooks/todayTrafficQueryPolicy";
 import { getLoadRecords } from "@/services/api";
@@ -359,13 +359,9 @@ function getTodayTrafficQueryOptions(
       };
     },
     enabled: stableUuids.length > 0,
-    staleTime: 60_000,
-    refetchInterval: (query) =>
-      getTodayTrafficRefreshInterval(
-        query.state.data?.source,
-        query.state.error != null,
-      ),
-    refetchOnWindowFocus: "always",
+    // 不定时轮询；切回这个标签页时数据超过 5 分钟才重查一次（见 TODAY_TRAFFIC_STALE_MS）。
+    staleTime: TODAY_TRAFFIC_STALE_MS,
+    refetchOnWindowFocus: true,
     retry: 1,
   });
 }

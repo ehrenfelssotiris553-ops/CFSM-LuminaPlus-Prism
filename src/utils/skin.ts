@@ -129,6 +129,14 @@ export function skinRootAttributes(style: SkinStyle): Record<string, string | nu
 
 let appliedSignature = "";
 
+/** <html> 上已经是这套风格了吗（index.html 的首帧脚本可能已经按缓存挂好了）。 */
+function rootMatches(root: HTMLElement, style: SkinStyle): boolean {
+  for (const [name, value] of Object.entries(skinRootAttributes(style))) {
+    if (root.getAttribute(name) !== value) return false;
+  }
+  return root.style.getPropertyValue("--accent-custom") === style.accent;
+}
+
 /** 把风格写到 <html>；没变化时什么都不做。返回是否真的改了（改了要让画布图表重取颜色）。 */
 export function applySkinStyle(style: SkinStyle): boolean {
   if (typeof document === "undefined") return false;
@@ -136,6 +144,8 @@ export function applySkinStyle(style: SkinStyle): boolean {
   if (signature === appliedSignature) return false;
   appliedSignature = signature;
   const root = document.documentElement;
+  // 首帧脚本已经挂好同一套：不用再写，也不用让所有图表重画一遍。
+  if (rootMatches(root, style)) return false;
   for (const [name, value] of Object.entries(skinRootAttributes(style))) {
     if (value === null) root.removeAttribute(name);
     else root.setAttribute(name, value);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getTodayTrafficRecordRangeHours,
-  getTodayTrafficRefreshInterval,
+  TODAY_TRAFFIC_STALE_MS,
   selectActiveTodayTrafficUuids,
 } from "@/hooks/todayTrafficQueryPolicy";
 import { throwIfSignalAborted } from "@/hooks/useTodayTrafficStats";
@@ -34,14 +34,8 @@ describe("today traffic query policy", () => {
     expect(selectActiveTodayTrafficUuids(["node-a"], new Set())).toEqual([]);
   });
 
-  it("keeps successful queries refreshing", () => {
-    expect(getTodayTrafficRefreshInterval("records", false)).toBe(5 * 60 * 1000);
-  });
-
-  it("retries failed queries on a shorter interval without polling an idle query", () => {
-    expect(getTodayTrafficRefreshInterval("records", true)).toBe(60 * 1000);
-    expect(getTodayTrafficRefreshInterval(undefined, true)).toBe(60 * 1000);
-    expect(getTodayTrafficRefreshInterval(undefined, false)).toBe(false);
+  it("treats data as fresh for five minutes instead of polling", () => {
+    expect(TODAY_TRAFFIC_STALE_MS).toBe(5 * 60 * 1000);
   });
 
   it("uses the abort flag directly for older Safari without throwIfAborted", () => {

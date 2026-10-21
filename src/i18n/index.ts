@@ -1,6 +1,4 @@
-import { getLanguage, getLocale, type Language } from "./language";
-import { en } from "./messages/en";
-import { es } from "./messages/es";
+import { getLanguage, getLocale, registerDictionaryLoader, type Language } from "./language";
 import { zh, type MessageKey, type Messages } from "./messages/zh";
 
 export type { MessageKey } from "./messages/zh";
@@ -14,10 +12,37 @@ export {
   resolveLanguage,
   setLanguage,
   useLanguage,
+  whenLanguageReady,
   type Language,
 } from "./language";
 
-const DICTIONARIES: Record<Language, Messages> = { zh, en, es };
+// 中文直接在首页包里；英文、西语用到才下载（见 language.ts 的 registerDictionaryLoader）。
+const DICTIONARIES: Partial<Record<Language, Messages>> = { zh };
+const pendingDictionaries = new Map<Language, Promise<void>>();
+
+function importDictionary(language: Language): Promise<Messages> {
+  return language === "es"
+    ? import("./messages/es").then((module) => module.es)
+    : import("./messages/en").then((module) => module.en);
+}
+
+registerDictionaryLoader((language) => {
+  if (DICTIONARIES[language]) return null;
+  let pending = pendingDictionaries.get(language);
+  if (!pending) {
+    pending = importDictionary(language).then(
+      (messages) => {
+        DICTIONARIES[language] = messages;
+      },
+      () => {
+        // 下载失败（断网等）：先按中文显示，下次切语言时再试。
+        pendingDictionaries.delete(language);
+      },
+    );
+    pendingDictionaries.set(language, pending);
+  }
+  return pending;
+});
 
 /**
  * 取当前界面语言的文案。`{name}` 用 `params` 里的同名值替换。
@@ -26,7 +51,7 @@ const DICTIONARIES: Record<Language, Messages> = { zh, en, es };
  * 组件里 `useMemo` 缓存的文案也会跟着换。
  */
 export function t(key: MessageKey, params?: Record<string, string | number>): string {
-  const template = DICTIONARIES[getLanguage()][key] ?? zh[key];
+  const template = DICTIONARIES[getLanguage()]?.[key] ?? zh[key];
   if (!params) return template;
   return template.replace(/\{(\w+)\}/g, (match, name: string) =>
     name in params ? String(params[name]) : match,

@@ -74,11 +74,50 @@ export function getLocale(language: Language = current): string {
   return LOCALES[language];
 }
 
+/**
+ * 词典按需加载（i18n/index.ts 注册）：英文、西语各是单独的文件，用到才下载，中文直接打包在首页里 ——
+ * 三种语言原来全打进首页，中文站每次白下载两份用不到的词典。返回 null 表示这门语言的词典已经在了。
+ */
+type DictionaryLoader = (language: Language) => Promise<void> | null;
+let ensureDictionary: DictionaryLoader = () => null;
+
+export function registerDictionaryLoader(loader: DictionaryLoader) {
+  ensureDictionary = loader;
+}
+
+/** 最近一次要切到的语言；词典还在下载时 `current` 先不变，下载完再切，不会半中半英。 */
+let requested: Language = current;
+
 export function setLanguage(language: Language) {
+  requested = language;
+  const pending = ensureDictionary(language);
+  if (pending) {
+    void pending.then(() => {
+      if (requested === language) commitLanguage(language);
+    });
+    return;
+  }
+  commitLanguage(language);
+}
+
+function commitLanguage(language: Language) {
   if (language === current) return;
   current = language;
   if (typeof document !== "undefined") document.documentElement.lang = getLocale(language);
   listeners.forEach((listener) => listener());
+}
+
+/** 等词典最多这么久：网络卡住时先按中文显示，词典到了再自动切过去，不让页面一直转圈。 */
+const LANGUAGE_READY_TIMEOUT_MS = 4_000;
+
+/** 等要用的那门语言的词典下载好。读到站点配置后、渲染内容前调用（见 api.ts 的 getPublic），页面不会先中文再跳。 */
+export function whenLanguageReady(): Promise<void> {
+  const pending = ensureDictionary(requested);
+  if (!pending) return Promise.resolve();
+  return Promise.race([
+    pending,
+    new Promise<void>((resolve) => setTimeout(resolve, LANGUAGE_READY_TIMEOUT_MS)),
+  ]);
 }
 
 let siteDefaultLanguage: string | null | undefined = "auto";

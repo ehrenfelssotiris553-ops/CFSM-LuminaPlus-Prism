@@ -7,6 +7,7 @@ import {
   resolveLanguage,
   setLanguage,
   t,
+  whenLanguageReady,
 } from "@/i18n";
 import { en } from "@/i18n/messages/en";
 import { es } from "@/i18n/messages/es";
@@ -40,12 +41,15 @@ describe("resolveLanguage", () => {
 describe("t", () => {
   afterEach(() => setLanguage("zh"));
 
-  it("switches language and fills in parameters", () => {
+  it("switches language once its dictionary has loaded, and fills in parameters", async () => {
     expect(getLanguage()).toBe("zh");
     expect(t("renewal.expiresIn", { n: 3 })).toBe("3 天后到期");
     setLanguage("en");
+    await whenLanguageReady();
+    expect(getLanguage()).toBe("en");
     expect(t("renewal.expiresIn", { n: 3 })).toBe("Expires in 3 d");
     setLanguage("es");
+    await whenLanguageReady();
     expect(t("renewal.expiresIn", { n: 3 })).toBe("Vence en 3 d");
   });
 

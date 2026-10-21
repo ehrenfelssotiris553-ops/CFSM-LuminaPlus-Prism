@@ -40,7 +40,7 @@ import {
   withReportTimestamp,
 } from "@/services/cfsm/mappers";
 import { seedMeasuredHistory } from "@/services/pingLiveStore";
-import { applySiteLanguage } from "@/i18n";
+import { applySiteLanguage, whenLanguageReady } from "@/i18n";
 import { resolvePreferredAppearance } from "@/utils/themeSettings";
 import { themeSyncMarkerOf } from "@/utils/themeMeta";
 
@@ -175,6 +175,8 @@ export async function getPublic(options?: RequestOptions): Promise<PublicConfig>
   if (config.turnstile_enabled !== true) discardTurnstileCredentials();
   // 内容要等配置到手才渲染（AppShell 先只显示加载圈），在这里定语言，页面一出来就是对的语言。
   applySiteLanguage(config.default_language);
+  // 英文 / 西语词典是按需下载的：等它到了再交出配置，内容一出来就是对的语言。
+  await whenLanguageReady();
   const carrierNames = resolveCarrierNames({
     ct: config.custom_ct_name, cu: config.custom_cu_name, cm: config.custom_cm_name, bd: config.custom_bd_name,
     node_1: config.node_1_name, node_2: config.node_2_name, node_3: config.node_3_name, node_4: config.node_4_name,
