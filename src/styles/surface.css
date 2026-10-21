@@ -377,6 +377,71 @@ body::after {
   display: none;
 }
 
+/* 快捷栏「切换卡片视图」的弹出菜单（ViewModeMenu）：经典四种 + 新布局六种，两列排。 */
+.view-mode-menu {
+  display: flex;
+  width: 256px;
+  max-width: calc(100vw - 2rem);
+  flex-direction: column;
+  gap: 10px;
+  align-self: flex-end;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: calc(16px * var(--radius-scale, 1));
+  background: var(--surface-elev);
+  box-shadow: 0 18px 40px -24px rgba(0, 0, 0, 0.5);
+  pointer-events: auto;
+}
+
+.view-mode-menu-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.view-mode-menu-title {
+  padding: 0 4px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.view-mode-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.view-mode-menu-item {
+  display: flex;
+  min-width: 0;
+  height: 38px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: calc(10px * var(--radius-scale, 1));
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 550;
+  white-space: nowrap;
+}
+
+.view-mode-menu-item:hover {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
+
+.view-mode-menu-item[aria-checked="true"] {
+  border-color: color-mix(in srgb, var(--accent-500) 45%, transparent);
+  background: color-mix(in srgb, var(--accent-500) 10%, transparent);
+  color: var(--text-primary);
+}
+
+.view-mode-menu-item svg {
+  flex: 0 0 auto;
+}
+
 .metric-color-group {
   display: flex;
   flex-direction: column;

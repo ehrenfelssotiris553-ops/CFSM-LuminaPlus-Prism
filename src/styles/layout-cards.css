@@ -1,0 +1,557 @@
+/*
+ * 六种新卡片（components/node/LayoutCards.tsx）。颜色全部走主题变量，六套配色风格直接生效；
+ * 圆角乘 --radius-scale，跟着风格和「圆角」设置变。
+ */
+
+.lc-card {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: calc(14px * var(--radius-scale, 1));
+  background: var(--surface-a);
+  color: var(--text-primary);
+  /* 屏幕外的卡片跳过布局和绘制，和原来几种卡片一样。 */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 300px;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.lc-card[aria-busy] {
+  min-height: 240px;
+}
+
+.lc-card.is-offline {
+  border-color: color-mix(in srgb, var(--status-offline) 35%, var(--border));
+}
+
+.lc-head {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.lc-title {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lc-title:hover {
+  color: var(--accent-500);
+}
+
+.lc-os {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  margin-left: auto;
+  border-radius: calc(8px * var(--radius-scale, 1));
+  color: var(--text-tertiary);
+}
+
+.lc-os:hover {
+  background: var(--hover-bg-a);
+}
+
+.lc-offline-chip {
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--status-offline) 14%, transparent);
+  color: var(--status-offline);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.lc-label {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.lc-up {
+  color: var(--traffic-up);
+}
+
+.lc-down {
+  color: var(--traffic-down);
+}
+
+.lc-card small {
+  margin-left: 2px;
+  color: var(--text-tertiary);
+  font-size: 0.78em;
+  font-weight: 500;
+}
+
+.lc-offline {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: calc(10px * var(--radius-scale, 1));
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+}
+
+/* ---------- 底部一行、迷你指标行 ---------- */
+
+.lc-foot,
+.lc-mini-metrics {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.lc-foot {
+  padding-top: 9px;
+  border-top: 1px solid var(--hairline);
+}
+
+.lc-mini-metrics {
+  overflow: hidden;
+}
+
+.lc-subtitle {
+  min-width: 0;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lc-foot-end {
+  margin-left: auto;
+}
+
+.lc-ping {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.lc-ping b {
+  font-weight: 700;
+}
+
+/* ---------- 条、圆环、流量 ---------- */
+
+.lc-track {
+  display: block;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--progress-bg);
+}
+
+.lc-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 400ms ease;
+}
+
+.lc-meter {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.lc-meter-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.lc-meter-head b {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.lc-meters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.lc-traffic {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.lc-traffic-value {
+  color: var(--text-secondary);
+  font-size: 11.5px;
+}
+
+/* 圆环：底色圆和进度都画在 ::before 上，中间用 mask 挖空 —— 卡片半透明（雾玻璃）时也不会透出底下的颜色。 */
+.lc-ring {
+  position: relative;
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+}
+
+.lc-ring::before {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(var(--lc-ring-color) var(--lc-ring), var(--progress-bg) 0);
+  content: "";
+  mask: radial-gradient(closest-side, transparent 74%, #000 75%);
+}
+
+.lc-ring > span {
+  position: relative;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.lc-ring-item {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.lc-ring-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.2fr);
+  align-items: center;
+  gap: 6px;
+}
+
+.lc-ring-net {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 10px;
+  border-left: 1px solid var(--hairline);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.lc-ring-net strong {
+  color: var(--text-primary);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* ---------- 数据大卡 ---------- */
+
+.lc-hero-top {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.lc-hero-number {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.lc-hero-number strong {
+  color: var(--text-primary);
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+.lc-hero-number strong small {
+  margin-left: 4px;
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
+.lc-hero-number.is-small strong {
+  font-size: 19px;
+  letter-spacing: -0.02em;
+}
+
+.lc-hero-number.is-small strong small {
+  font-size: 10.5px;
+}
+
+.lc-spark {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.lc-spark-area {
+  fill: var(--traffic-down);
+  fill-opacity: 0.15;
+}
+
+.lc-spark-line {
+  fill: none;
+  stroke: var(--traffic-down);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+/* ---------- 线路卡 ---------- */
+
+.lc-route-single {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.lc-route-bars {
+  display: block;
+  min-width: 0;
+}
+
+.lc-route-single strong {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.lc-route-loss {
+  font-size: 11.5px;
+}
+
+/* ---------- 便当盒 ---------- */
+
+.lc-bento {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: minmax(64px, auto);
+  gap: 6px;
+}
+
+.lc-tile {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: calc(10px * var(--radius-scale, 1));
+  background: var(--surface-sunken);
+  font-size: 11.5px;
+}
+
+.lc-tile b {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.lc-tile-speed {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  grid-column: span 2;
+}
+
+.lc-tile-cpu {
+  align-items: center;
+  grid-row: span 2;
+}
+
+.lc-tile-wide {
+  grid-column: span 2;
+}
+
+.lc-tile-full {
+  grid-column: 1 / -1;
+  min-height: 0;
+}
+
+.lc-bento .lc-tile-full {
+  padding-block: 8px;
+}
+
+/* ---------- 健康分卡 ---------- */
+
+.lc-health {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.lc-score {
+  width: 76px;
+  height: 76px;
+  flex: 0 0 auto;
+}
+
+.lc-score::before {
+  mask: radial-gradient(closest-side, transparent 80%, #000 81%);
+}
+
+.lc-score > span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.lc-score b {
+  font-size: 24px;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.lc-score small {
+  margin: 3px 0 0;
+  font-size: 10.5px;
+}
+
+.lc-issues {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lc-issues li {
+  --tone: var(--status-success);
+  display: flex;
+  min-width: 0;
+  min-height: 28px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  overflow: hidden;
+  border-radius: calc(8px * var(--radius-scale, 1));
+  background: color-mix(in srgb, var(--tone) 12%, transparent);
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lc-issues li::before {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--tone);
+  content: "";
+}
+
+.lc-issues li[data-tone="warn"] {
+  --tone: var(--status-warning);
+}
+
+.lc-issues li[data-tone="bad"] {
+  --tone: var(--status-error);
+}
+
+/* ---------- 仪表盘 ---------- */
+
+.lc-gauges {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 160px minmax(0, 1fr);
+  align-items: end;
+  gap: 4px;
+}
+
+.lc-side-gauge,
+.lc-main-gauge {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+}
+
+.lc-side-gauge b {
+  margin-top: -18px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.lc-main-gauge strong {
+  margin-top: -44px;
+  font-size: 24px;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.lc-main-gauge .lc-label {
+  margin-top: 4px;
+}
+
+.lc-arc-track,
+.lc-arc-fill {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 7;
+}
+
+.lc-arc-track {
+  stroke: var(--progress-bg);
+}
+
+.lc-arc-fill {
+  transition: stroke-dasharray 500ms ease;
+}
+
+.lc-arc-track.is-main,
+.lc-arc-fill.is-main {
+  stroke-width: 11;
+}
+
+.lc-arc-fill.is-main {
+  stroke: var(--traffic-down);
+}
+
+.lc-tick {
+  stroke: var(--text-tertiary);
+  stroke-linecap: round;
+  stroke-width: 1.2;
+}
+
+.lc-tick.is-major {
+  stroke-width: 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lc-track > span,
+  .lc-arc-fill {
+    transition: none;
+  }
+}

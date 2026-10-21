@@ -90,6 +90,7 @@
 :root[data-skin="paper"]
   :is(
     .home-brand-title,
+    .lc-title,
     .server-card-title-link,
     .compact-node-title,
     .mini-node-title,
@@ -176,7 +177,7 @@
   background-attachment: scroll;
 }
 
-:root[data-skin="frost"] :is(.server-card, .compact-node-card, .mini-node-card, .node-list-scroll) {
+:root[data-skin="frost"] :is(.server-card, .compact-node-card, .mini-node-card, .node-list-scroll, .lc-card) {
   box-shadow: var(--skin-card-shadow);
 }
 
@@ -198,33 +199,34 @@
 }
 
 :root[data-skin="terminal"]:not([data-appearance="dark"]) {
-  --bg-0: #fbf5e4;
-  --surface: #fffaee;
-  --surface-elev: #fffcf3;
-  --surface-sunken: #f3ead2;
-  --border: #e3d8bb;
-  --border-subtle: #ece3c8;
-  --border-strong: #d2c49f;
-  --hairline: #e3d8bb;
-  --text-primary: #0b3440;
-  --text-secondary: #2f5560;
-  --text-tertiary: #536b74;
-  --fill-secondary: rgba(11, 52, 64, 0.1);
-  --fill-tertiary: rgba(11, 52, 64, 0.05);
-  --hover-bg: #f6eed8;
-  --progress-bg: #ece3c8;
-  --progress-cpu: #1d7a5f;
+  /* 淡薄荷灰底 + 深绿字：和素白的米色纸感拉开。 */
+  --bg-0: #e6efe8;
+  --surface: #f5faf6;
+  --surface-elev: #f9fcfa;
+  --surface-sunken: #dce8df;
+  --border: #c4d6c9;
+  --border-subtle: #d3e1d6;
+  --border-strong: #a9c2b0;
+  --hairline: #c4d6c9;
+  --text-primary: #0f2a1d;
+  --text-secondary: #2c4a3a;
+  --text-tertiary: #4b6757;
+  --fill-secondary: rgba(15, 42, 29, 0.1);
+  --fill-tertiary: rgba(15, 42, 29, 0.05);
+  --hover-bg: #e9f2ec;
+  --progress-bg: #d3e1d6;
+  --progress-cpu: #15803d;
   --progress-memory: #0e7490;
-  --progress-disk: #9c5f09;
+  --progress-disk: #a16207;
   --progress-network: #2563eb;
   --progress-load: #a3367a;
-  --accent-500: #1d7a5f;
-  --accent-strong: #145a46;
-  --ring: rgba(29, 122, 95, 0.32);
-  --traffic-up: #1d7a5f;
+  --accent-500: #15803d;
+  --accent-strong: #166534;
+  --ring: rgba(21, 128, 61, 0.3);
+  --traffic-up: #15803d;
   --traffic-down: #0e7490;
-  --tag-gray-bg: #efe6cc;
-  --tag-gray-fg: #2f5560;
+  --tag-gray-bg: #dce8df;
+  --tag-gray-fg: #2c4a3a;
   --canvas-glow: none;
 }
 
@@ -266,11 +268,11 @@
 }
 
 :root[data-skin="aurora"]:not([data-appearance="dark"]) {
-  --bg-0: #f7f7fb;
+  --bg-0: #f4f3fb;
   --canvas-glow: radial-gradient(
     130% 70% at 50% -20%,
-    rgba(45, 212, 191, 0.28) 0%,
-    rgba(139, 92, 246, 0.18) 45%,
+    rgba(45, 212, 191, 0.45) 0%,
+    rgba(139, 92, 246, 0.3) 45%,
     rgba(139, 92, 246, 0) 75%
   );
   --surface: #ffffff;
@@ -334,13 +336,90 @@
   --skin-card-shadow: 0 0 0 1px rgba(255, 255, 255, 0.02), 0 12px 32px rgba(0, 0, 0, 0.35);
 }
 
-:root[data-skin="aurora"] :is(.server-card, .compact-node-card, .mini-node-card, .node-list-scroll, .overview-card) {
+:root[data-skin="aurora"] :is(.server-card, .compact-node-card, .mini-node-card, .node-list-scroll, .overview-card, .lc-card) {
   box-shadow: var(--skin-card-shadow);
 }
 
 /* 大数字收紧一点字距，更醒目。 */
 :root[data-skin="aurora"] :is(.overview-card-value, .server-card-meta-value, .compact-node-info-row-value) {
   letter-spacing: -0.02em;
+}
+
+/* ---------- 座舱：黑底琥珀仪表光，像汽车仪表的夜间模式 ---------- */
+
+:root[data-skin="cockpit"] {
+  --radius-scale: 1.15;
+}
+
+:root[data-skin="cockpit"]:not([data-appearance="dark"]) {
+  /* 浅色是冷的金属灰，和素白的米色、终端的薄荷灰都分得开。 */
+  --bg-0: #dfe3e8;
+  --surface: #f2f4f7;
+  --surface-elev: #f7f8fa;
+  --surface-sunken: #e6e9ed;
+  --border: #c9cfd6;
+  --border-subtle: #d8dde3;
+  --border-strong: #aab2bc;
+  --hairline: #c9cfd6;
+  --text-primary: #14171b;
+  --text-secondary: #3a4048;
+  --text-tertiary: #596069;
+  --fill-secondary: rgba(20, 23, 27, 0.1);
+  --fill-tertiary: rgba(20, 23, 27, 0.05);
+  --hover-bg: #e9ecf0;
+  --progress-bg: #d3d8de;
+  --progress-cpu: #c26a00;
+  --progress-memory: #c2410c;
+  --progress-swap: #b45309;
+  --progress-disk: #7c5e10;
+  --progress-network: #0f766e;
+  --progress-load: #9d174d;
+  --accent-500: #c26a00;
+  --accent-strong: #9a5400;
+  --ring: rgba(194, 106, 0, 0.3);
+  --traffic-up: #3a4048;
+  --traffic-down: #c26a00;
+  --tag-gray-bg: #e1e5ea;
+  --tag-gray-fg: #3a4048;
+  --canvas-glow: none;
+}
+
+:root[data-skin="cockpit"][data-appearance="dark"] {
+  --bg-0: #0a0a0b;
+  --canvas-glow: radial-gradient(90% 50% at 50% 0%, rgba(255, 176, 32, 0.12) 0%, rgba(255, 176, 32, 0) 70%);
+  --surface: #131315;
+  --surface-elev: #19191c;
+  --surface-sunken: #0d0d0f;
+  --border: #232327;
+  --border-subtle: #1c1c20;
+  --border-strong: #3a3a40;
+  --hairline: #232327;
+  --text-primary: #f3efe7;
+  --text-secondary: #c4bdb1;
+  --text-tertiary: #8f897f;
+  --fill-secondary: rgba(255, 176, 32, 0.1);
+  --fill-tertiary: rgba(255, 176, 32, 0.05);
+  --hover-bg: #1a1a1d;
+  --progress-bg: #26262b;
+  --progress-cpu: #ffb020;
+  --progress-memory: #ff8a3d;
+  --progress-swap: #ffd166;
+  --progress-disk: #e8d48b;
+  --progress-network: #4fd18b;
+  --progress-load: #ff6b8a;
+  --accent-500: #ffb020;
+  --accent-strong: #f59e0b;
+  --text-on-strong: #0a0a0b;
+  --ring: rgba(255, 176, 32, 0.4);
+  --traffic-up: #f3efe7;
+  --traffic-down: #ffb020;
+  --tag-gray-bg: rgba(255, 176, 32, 0.1);
+  --tag-gray-fg: #c4bdb1;
+}
+
+/* 深色下表盘弧线和圆环微微发光，像仪表背光。 */
+:root[data-skin="cockpit"][data-appearance="dark"] :is(.lc-arc-fill, .lc-ring::before) {
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent-500) 55%, transparent));
 }
 
 /* ---------- 自定义：主色、圆角、疏密、数字字体（写在风格后面，压过风格自带的值） ---------- */
@@ -383,7 +462,7 @@
   gap: 8px;
 }
 
-:root[data-density="tight"] :is(.compact-node-card, .mini-node-card) {
+:root[data-density="tight"] :is(.compact-node-card, .mini-node-card, .lc-card) {
   padding: 10px;
   gap: 7px;
 }
@@ -402,7 +481,7 @@
   gap: 24px;
 }
 
-:root[data-density="loose"] :is(.compact-node-card, .mini-node-card) {
+:root[data-density="loose"] :is(.compact-node-card, .mini-node-card, .lc-card) {
   padding: 18px;
   gap: 13px;
 }
@@ -558,4 +637,67 @@
 .skin-accent.is-auto[aria-pressed="true"] {
   border-color: var(--accent-500);
   color: var(--text-primary);
+}
+
+/* ---------- 设置页的卡片布局选择、推荐搭配 ---------- */
+
+.instance-segmented.is-prominent.layout-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 104px), 1fr));
+}
+
+.instance-segmented.layout-options button {
+  min-width: 0;
+  padding: 0 6px;
+  white-space: nowrap;
+}
+
+.layout-pairs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
+  gap: 8px;
+}
+
+.layout-pair {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: calc(12px * var(--radius-scale, 1));
+  background: var(--surface-a);
+  color: var(--text-secondary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.layout-pair:hover {
+  background: var(--hover-bg-a);
+}
+
+.layout-pair[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--accent-500) 50%, var(--border));
+  background: color-mix(in srgb, var(--accent-500) 9%, var(--surface-elev));
+  color: var(--text-primary);
+}
+
+.layout-pair-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.layout-pair-text b {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.layout-pair-text small {
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

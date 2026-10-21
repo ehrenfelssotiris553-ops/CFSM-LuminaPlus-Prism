@@ -46,6 +46,16 @@ const SKIN_PREVIEW: Record<SkinId, { bg: string; card: string; border: string; t
     radius: 9,
     barRadius: 999,
   },
+  cockpit: {
+    bg: "radial-gradient(90% 60% at 50% 0%, rgba(255,176,32,0.18) 0%, rgba(255,176,32,0) 70%), #0a0a0b",
+    card: "#131315",
+    border: "#232327",
+    text: "#f3efe7",
+    bar1: "#ffb020",
+    bar2: "#ff8a3d",
+    radius: 9,
+    barRadius: 999,
+  },
 };
 
 const ACCENT_NAME_KEYS: MessageKey[] = [

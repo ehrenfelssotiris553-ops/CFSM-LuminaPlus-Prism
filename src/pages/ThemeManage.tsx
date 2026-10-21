@@ -3,9 +3,9 @@ import { OfflineNotifyToggle } from "@/components/theme/OfflineNotifyToggle";
 import { ScreenshotMaskSettings } from "@/components/theme/ScreenshotMaskSettings";
 import { SkinSettings } from "@/components/theme/SkinSettings";
 import { applySkin } from "@/components/shell/BackgroundLayer";
-import { skinStyleOf, type SkinStyle } from "@/utils/skin";
+import { skinStyleOf, type SkinId, type SkinStyle } from "@/utils/skin";
 import { PingDisplayEditor } from "@/components/theme/PingDisplayEditor";
-import { t } from "@/i18n";
+import { t, type MessageKey } from "@/i18n";
 import {
   memo,
   useCallback,
@@ -35,10 +35,8 @@ import {
   BellRing,
   EyeOff,
   Gauge,
-  Grid3x3,
   LayoutTemplate,
   LayoutGrid,
-  List,
   ListFilter,
   Moon,
   Network,
@@ -120,8 +118,13 @@ import {
   mergeLocalThemeSettingsEdits,
   mergeThemeSettingsLayers,
   withPreferredAppearance,
+  NODE_VIEW_MODES,
+  type NodeViewMode,
   type ResolvedThemeSettings,
 } from "@/utils/themeSettings";
+import { LayoutIcon } from "@/components/node/LayoutIcon";
+import { LAYOUT_PAIRS } from "@/utils/layouts";
+import { clearViewModeOverrides } from "@/hooks/useViewMode";
 import {
   getDefaultOverviewRatingLabelText,
   type OverviewRatingKind,
@@ -136,12 +139,21 @@ const APPEARANCE_OPTIONS = [
   { value: "system", get label() { return t("appearance.system"); }, icon: SunMoon },
   { value: "dark", get label() { return t("appearance.dark"); }, icon: Moon },
 ] as const;
-const NODE_VIEW_MODE_OPTIONS = [
-  { value: "large", get label() { return t("settings.viewLarge"); }, icon: LayoutGrid },
-  { value: "compact", get label() { return t("settings.viewCompact"); }, icon: Rows3 },
-  { value: "mini", get label() { return t("settings.viewMini"); }, icon: Grid3x3 },
-  { value: "list", get label() { return t("settings.viewList"); }, icon: List },
-] as const;
+// 原来四种沿用设置页原来的叫法（「大卡片」等），新加的六种和快捷栏菜单同名。
+const CLASSIC_VIEW_LABEL_KEYS = {
+  large: "settings.viewLarge",
+  compact: "settings.viewCompact",
+  mini: "settings.viewMini",
+  list: "settings.viewList",
+} as const satisfies Partial<Record<NodeViewMode, MessageKey>>;
+const NODE_VIEW_MODE_OPTIONS = NODE_VIEW_MODES.map((value) => ({
+  value,
+  get label() {
+    return t(value in CLASSIC_VIEW_LABEL_KEYS
+      ? CLASSIC_VIEW_LABEL_KEYS[value as keyof typeof CLASSIC_VIEW_LABEL_KEYS]
+      : (`viewMode.${value}` as MessageKey));
+  },
+}));
 const MOBILE_VIEW_MODE_OPTIONS = NODE_VIEW_MODE_OPTIONS.filter((option) => option.value !== "list");
 
 // 大卡片/小卡片显示单条还是多条线路。value 直接是 enableHomepageMultiPing 的布尔值。
@@ -1035,6 +1047,12 @@ export function ThemeManage() {
       ...(next.numericFont !== undefined ? { skinNumericFont: next.numericFont } : null),
     }));
   }, []);
+  // 「推荐搭配」一键套用：电脑和手机的默认布局 + 风格一起换；这个标签页里用快捷栏临时选过的布局也清掉，首页才会跟着变。
+  const applyLayoutPair = useCallback((mode: NodeViewMode, skin: SkinId) => {
+    editVersionRef.current += 1;
+    setDraft((prev) => ({ ...prev, desktopNodeViewMode: mode, mobileNodeViewMode: mode, skin }));
+    clearViewModeOverrides();
+  }, []);
   // 绑定关系的三个入口(勾选/全选/清空)都是基于前值的函数式更新,单独收口。
   const patchBindings = useCallback(
     (updater: (prev: HomepagePingTaskBindings) => HomepagePingTaskBindings) => {
@@ -1793,8 +1811,8 @@ export function ThemeManage() {
                         {t("settings.desktopDefaultHint")}
                       </div>
                     </div>
-                    <div className="instance-segmented is-prominent is-even">
-                      {NODE_VIEW_MODE_OPTIONS.map(({ value, label, icon: Icon }) => (
+                    <div className="instance-segmented is-prominent layout-options">
+                      {NODE_VIEW_MODE_OPTIONS.map(({ value, label }) => (
                         <button
                           key={value}
                           type="button"
@@ -1803,7 +1821,7 @@ export function ThemeManage() {
                           onClick={() => patch("desktopNodeViewMode", value)}
                           className="inline-flex items-center justify-center gap-2"
                         >
-                          <Icon size={14} />
+                          <LayoutIcon mode={value} size={14} />
                           <span>{label}</span>
                         </button>
                       ))}
@@ -1818,8 +1836,8 @@ export function ThemeManage() {
                         {t("settings.mobileDefaultHint")}
                       </div>
                     </div>
-                    <div className="instance-segmented is-prominent is-even">
-                      {MOBILE_VIEW_MODE_OPTIONS.map(({ value, label, icon: Icon }) => (
+                    <div className="instance-segmented is-prominent layout-options">
+                      {MOBILE_VIEW_MODE_OPTIONS.map(({ value, label }) => (
                         <button
                           key={value}
                           type="button"
@@ -1828,12 +1846,41 @@ export function ThemeManage() {
                           onClick={() => patch("mobileNodeViewMode", value)}
                           className="inline-flex items-center justify-center gap-2"
                         >
-                          <Icon size={14} />
+                          <LayoutIcon mode={value} size={14} />
                           <span>{label}</span>
                         </button>
                       ))}
                     </div>
                   </div>
+                </div>
+                <div className="mt-4">
+                  <div className="setting-subhead">
+                    <span className="setting-subhead-title">{t("layout.pairs")}</span>
+                  </div>
+                  <div className="layout-pairs">
+                    {LAYOUT_PAIRS.map(([mode, skin]) => {
+                      const active =
+                        draft.desktopNodeViewMode === mode &&
+                        draft.mobileNodeViewMode === mode &&
+                        draft.skin === skin;
+                      return (
+                        <button
+                          key={mode}
+                          type="button"
+                          className="layout-pair"
+                          aria-pressed={active}
+                          onClick={() => applyLayoutPair(mode, skin)}
+                        >
+                          <LayoutIcon mode={mode} size={16} />
+                          <span className="layout-pair-text">
+                            <b>{t(`viewMode.${mode}` as MessageKey)}</b>
+                            <small>{t("layout.withSkin", { skin: t(`skin.name.${skin}` as MessageKey) })}</small>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-2 setting-hint">{t("layout.pairsHint")}</p>
                 </div>
               </InstancePanel>
 

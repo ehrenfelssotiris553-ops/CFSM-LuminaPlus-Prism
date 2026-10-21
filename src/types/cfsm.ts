@@ -508,8 +508,9 @@ export const EMPTY_CARRIER_PING: CarrierPingSnapshot = Object.freeze(
 
 export interface ThemeSettings {
   defaultAppearance?: "system" | "light" | "dark";
-  desktopNodeViewMode?: "large" | "compact" | "mini" | "list";
-  mobileNodeViewMode?: "large" | "compact" | "mini" | "list";
+  /** 取值见 utils/themeSettings 的 NODE_VIEW_MODES；IPStack 版只认前四种，其它会回退成小卡。 */
+  desktopNodeViewMode?: string;
+  mobileNodeViewMode?: string;
   enableAdminButton?: boolean;
   /** 首页快捷栏里显示哪些按钮（主题设置按钮一直显示，不然访客回不到设置页）。 */
   quickShowAppearance?: boolean;

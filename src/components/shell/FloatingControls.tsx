@@ -1,6 +1,6 @@
 import { t, type MessageKey } from "@/i18n";
-import { lazy, Suspense, useEffect, useState } from "react";
-import { AlertTriangle, ChevronLeft, ChevronRight, Grid3x3, LayoutGrid, List, Monitor, Palette, Rows3, Settings, SlidersHorizontal, Sun, Moon } from "lucide-react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Monitor, Palette, Settings, SlidersHorizontal, Sun, Moon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { usePreferences } from "@/hooks/usePreferences";
 import { useViewMode } from "@/hooks/useViewMode";
@@ -9,24 +9,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { useThemeSettings } from "@/hooks/useThemeSettings";
 import { useScreenshotMask } from "@/hooks/useScreenshotMask";
 import { MaskIcon } from "@/components/node/MaskPicker";
+import { LayoutIcon } from "@/components/node/LayoutIcon";
+import { ViewModeMenu } from "./ViewModeMenu";
 import { toggleScreenshotMask } from "@/utils/screenshotMask";
 import { getAdminUrl } from "@/services/cfsm/config";
-import type { NodeViewMode } from "@/utils/themeSettings";
 import { readQuickControlsExpanded, writeQuickControlsExpanded } from "@/utils/quickControlsStorage";
 import { clsx } from "clsx";
 
 const MetricColorPicker = lazy(() =>
   import("./MetricColorPicker").then((module) => ({ default: module.MetricColorPicker })),
 );
-
-// 悬浮球切换按钮展示"下一档"的图标/文案(点击后会切到的视图),而不是当前视图——
-// 与 ThemeManage 里 NODE_VIEW_MODE_OPTIONS 的图标语义保持一致。
-const VIEW_MODE_META: Record<NodeViewMode, { icon: typeof LayoutGrid; labelKey: MessageKey }> = {
-  large: { icon: LayoutGrid, labelKey: "viewMode.large" },
-  compact: { icon: Rows3, labelKey: "viewMode.compact" },
-  mini: { icon: Grid3x3, labelKey: "viewMode.mini" },
-  list: { icon: List, labelKey: "viewMode.list" },
-};
 
 const APPEARANCE_OPTIONS = [
   { value: "light", icon: Sun, labelKey: "appearance.light" },
@@ -40,7 +32,7 @@ export function FloatingControls({
   onExpandedChange?: (expanded: boolean) => void;
 }) {
   const { appearance, setAppearance } = usePreferences();
-  const { mode, nextMode, toggleMode } = useViewMode();
+  const { mode, device, setMode } = useViewMode();
   const { data: me } = useAuth();
   const themeSettings = useThemeSettings();
   const { failureStreak } = useNodeStoreStatus();
@@ -48,6 +40,10 @@ export function FloatingControls({
   const [collapsed, setCollapsed] = useState(() => !readQuickControlsExpanded());
   const [colorsOpen, setColorsOpen] = useState(false);
   const [colorsMounted, setColorsMounted] = useState(false);
+  // 卡片视图的弹出菜单（十种布局，点哪个切哪个）。
+  const [viewMenuOpen, setViewMenuOpen] = useState(false);
+  const viewButtonRef = useRef<HTMLButtonElement>(null);
+  const closeViewMenu = useCallback(() => setViewMenuOpen(false), []);
   const settingsReady = themeSettings.isReady;
   const showAdmin = settingsReady && themeSettings.enableAdminButton;
   // 主题设置与配色都只保存在本机浏览器（第三方主题不能写后端配置），
@@ -62,7 +58,6 @@ export function FloatingControls({
   const showSyncWarning = failureStreak >= 2;
   const hiddenTabIndex = collapsed ? -1 : undefined;
   const ToggleIcon = collapsed ? ChevronLeft : ChevronRight;
-  const ViewIcon = VIEW_MODE_META[nextMode].icon;
   // 只要不在最宽松的大卡默认态,就视为"已切换"，按钮保持高亮。
   const isReducedView = mode !== "large";
   useEffect(() => {
@@ -73,7 +68,10 @@ export function FloatingControls({
   const toggleControls = () => {
     // 收起快捷栏时同时结束子面板状态，避免下次展开时调色盘自动复现。
     const nextCollapsed = !collapsed;
-    if (nextCollapsed) setColorsOpen(false);
+    if (nextCollapsed) {
+      setColorsOpen(false);
+      setViewMenuOpen(false);
+    }
     setCollapsed(nextCollapsed);
     writeQuickControlsExpanded(!nextCollapsed);
   };
@@ -116,18 +114,23 @@ export function FloatingControls({
             )}
             {showViewMode && (
               <button
+                ref={viewButtonRef}
                 type="button"
-                onClick={toggleMode}
+                onClick={() => {
+                  setColorsOpen(false);
+                  setViewMenuOpen((value) => !value);
+                }}
                 aria-label={t("quick.switchView")}
-                aria-pressed={isReducedView}
-                title={t("quick.switchTo", { view: t(VIEW_MODE_META[nextMode].labelKey) })}
+                aria-haspopup="menu"
+                aria-expanded={viewMenuOpen}
+                title={t("quick.currentView", { view: t(`viewMode.${mode}` as MessageKey) })}
                 tabIndex={hiddenTabIndex}
                 className={clsx(
                   "control-button grid h-9 w-9 place-items-center",
-                  isReducedView && "control-toggle is-active",
+                  (isReducedView || viewMenuOpen) && "control-toggle is-active",
                 )}
               >
-                <ViewIcon size={16} />
+                <LayoutIcon mode={mode} size={16} />
               </button>
             )}
             {showColorPicker && (
@@ -135,6 +138,7 @@ export function FloatingControls({
                 type="button"
                 onClick={() => {
                   setColorsMounted(true);
+                  setViewMenuOpen(false);
                   setColorsOpen((value) => !value);
                 }}
                 aria-label={t("quick.cardColors")}
@@ -202,12 +206,24 @@ export function FloatingControls({
             )}
           </button>
         </div>
+        {showViewMode && viewMenuOpen && !collapsed && (
+          <ViewModeMenu
+            current={mode}
+            device={device}
+            anchorRef={viewButtonRef}
+            onClose={closeViewMenu}
+            onPick={(next) => {
+              setMode(next);
+              setViewMenuOpen(false);
+            }}
+          />
+        )}
         {showColorPicker && colorsMounted && (
           <Suspense fallback={null}>
             <MetricColorPicker hidden={collapsed || !colorsOpen} />
           </Suspense>
         )}
-        {showSyncWarning && !collapsed && !colorsOpen && (
+        {showSyncWarning && !collapsed && !colorsOpen && !viewMenuOpen && (
           <div className="floating-controls-sync-warning pointer-events-none flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--status-offline)_32%,transparent)] bg-[color-mix(in_srgb,var(--surface-a)_90%,transparent)] px-3 py-1 text-[11px] font-medium text-[var(--status-offline)] shadow-[0_10px_25px_-18px_rgba(0,0,0,0.8)] backdrop-blur">
             <AlertTriangle size={12} />
             <span>{t("quick.syncWarning")}</span>

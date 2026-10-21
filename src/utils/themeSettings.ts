@@ -122,7 +122,20 @@ export function mergeLocalThemeSettingsEdits(
   return merged;
 }
 export type Appearance = "system" | "light" | "dark";
-export type NodeViewMode = "large" | "compact" | "mini" | "list";
+/** 卡片视图：原来的四种 + Lumina Prism 新加的六种（见 components/node/LayoutCards）。 */
+export const NODE_VIEW_MODES = [
+  "large",
+  "compact",
+  "mini",
+  "list",
+  "ring",
+  "hero",
+  "route",
+  "bento",
+  "health",
+  "gauge",
+] as const;
+export type NodeViewMode = (typeof NODE_VIEW_MODES)[number];
 
 export interface ResolvedThemeSettings {
   defaultAppearance: Appearance;
@@ -322,7 +335,7 @@ function normalizeAppearance(
 }
 
 export function isNodeViewMode(value: unknown): value is NodeViewMode {
-  return value === "large" || value === "compact" || value === "mini" || value === "list";
+  return typeof value === "string" && (NODE_VIEW_MODES as readonly string[]).includes(value);
 }
 
 function normalizeNodeViewMode(

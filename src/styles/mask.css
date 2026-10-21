@@ -3,15 +3,15 @@
  * 文字在数据层已经换成同样长度的假内容，这里只负责「看起来像毛玻璃」：卡片根元素的 data-mask
  * 列出要模糊的字段，模糊的是假内容，截图里还原不出真名。国旗换成灰色色块，不用模糊。
  */
-[data-mask~="name"] :is(.server-card-title-link, .compact-node-title, .mini-node-title, .node-list-name),
-[data-mask~="tags"] :is(.server-card-subtitle, .compact-node-subtitle, .compact-node-tag, .mini-node-tag, .dstatus-tag-chip),
-[data-mask~="price"] :is(.dstatus-price-chip, .mini-node-price-tag, [data-field="billing"] .compact-node-info-row-value) {
+[data-mask~="name"] :is(.server-card-title-link, .compact-node-title, .mini-node-title, .node-list-name, .lc-title),
+[data-mask~="tags"] :is(.server-card-subtitle, .compact-node-subtitle, .compact-node-tag, .mini-node-tag, .dstatus-tag-chip, .lc-subtitle),
+[data-mask~="price"] :is(.dstatus-price-chip, .mini-node-price-tag, [data-field="billing"] .compact-node-info-row-value, .lc-price, .lc-expire) {
   filter: blur(4px);
   user-select: none;
 }
 
 /* 名称字大，模糊得重一点才看不出字形。 */
-[data-mask~="name"] :is(.server-card-title-link, .compact-node-title, .mini-node-title, .node-list-name) {
+[data-mask~="name"] :is(.server-card-title-link, .compact-node-title, .mini-node-title, .node-list-name, .lc-title) {
   filter: blur(6px);
 }
 

@@ -16,13 +16,15 @@ describe("view mode device contracts", () => {
     expect(getNextViewMode("large", "desktop")).toBe("compact");
     expect(getNextViewMode("compact", "desktop")).toBe("mini");
     expect(getNextViewMode("mini", "desktop")).toBe("list");
-    expect(getNextViewMode("list", "desktop")).toBe("large");
+    expect(getNextViewMode("list", "desktop")).toBe("ring");
+    expect(getNextViewMode("gauge", "desktop")).toBe("large");
   });
 
   it("cycles mobile views without exposing the desktop-only list view", () => {
     expect(getNextViewMode("large", "mobile")).toBe("compact");
     expect(getNextViewMode("compact", "mobile")).toBe("mini");
-    expect(getNextViewMode("mini", "mobile")).toBe("large");
+    expect(getNextViewMode("mini", "mobile")).toBe("ring");
+    expect(getNextViewMode("gauge", "mobile")).toBe("large");
     expect(getNextViewMode("list", "mobile")).toBe("mini");
   });
 });

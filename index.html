@@ -74,7 +74,7 @@
             const root = document.documentElement;
             const pick = (value, list) => (list.includes(value) ? value : null);
             const attrs = {
-              "data-skin": pick(skin.skin, ["paper", "frost", "terminal", "aurora"]),
+              "data-skin": pick(skin.skin, ["paper", "frost", "terminal", "aurora", "cockpit"]),
               "data-radius": pick(skin.radius, ["none", "sm", "md", "lg"]),
               "data-density": pick(skin.density, ["loose", "tight"]),
               "data-num-font": pick(skin.numericFont, ["mono"]),

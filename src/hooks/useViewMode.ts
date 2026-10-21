@@ -1,16 +1,16 @@
 import { useCallback, useSyncExternalStore } from "react";
 import { useThemeSettings } from "@/hooks/useThemeSettings";
 import { subscribeMediaQuery } from "@/utils/mediaQuery";
-import { isNodeViewMode, type NodeViewMode } from "@/utils/themeSettings";
+import { isNodeViewMode, NODE_VIEW_MODES, type NodeViewMode } from "@/utils/themeSettings";
 
 // Legacy keys retained so session view-mode overrides survive the rename.
 const DESKTOP_OVERRIDE_KEY = "cfsm-luminaplus:node-view-mode-session:desktop";
 const MOBILE_OVERRIDE_KEY = "cfsm-luminaplus:node-view-mode-session:mobile";
 export const MOBILE_VIEW_MODE_QUERY = "(max-width: 720px)";
-// 快捷切换按钮的循环顺序：大卡 → 小卡 → 迷你 → 列表 → 大卡……
-const VIEW_MODE_CYCLE: readonly NodeViewMode[] = ["large", "compact", "mini", "list"];
+// 循环顺序：大卡 → 小卡 → 迷你 → 列表 → 六种新布局 → 大卡……（快捷栏现在用弹出菜单直接选，这里给键盘 / 测试用）
+const VIEW_MODE_CYCLE: readonly NodeViewMode[] = NODE_VIEW_MODES;
 // 列表档天生不适合窄屏,仅桌面可用:移动端从循环里剔除,且默认值解析成 list 时兜底回 compact。
-const MOBILE_VIEW_MODES: readonly NodeViewMode[] = ["large", "compact", "mini"];
+export const MOBILE_VIEW_MODES: readonly NodeViewMode[] = NODE_VIEW_MODES.filter((mode) => mode !== "list");
 
 export type ViewModeDevice = "desktop" | "mobile";
 
@@ -57,6 +57,14 @@ function writeOverride(key: string, value: NodeViewMode) {
   } catch {
     // session storage 不可用时，保留内存里的行为。
   }
+}
+
+/** 设置页「一键套用」换了默认布局：清掉这个标签页里用快捷栏临时选过的布局，首页才会跟着变。 */
+export function clearViewModeOverrides() {
+  clearOverride(DESKTOP_OVERRIDE_KEY);
+  clearOverride(MOBILE_OVERRIDE_KEY);
+  refreshSnapshot();
+  emit();
 }
 
 function clearOverride(key: string) {

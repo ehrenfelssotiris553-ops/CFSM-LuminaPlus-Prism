@@ -1,5 +1,5 @@
 import { t } from "@/i18n";
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { CircleDollarSign } from "lucide-react";
@@ -47,6 +47,14 @@ import {
 import { CompactNodeCard } from "./CompactNodeCard";
 import { MiniNodeCard } from "./MiniNodeCard";
 import { NodeCard } from "./NodeCard";
+import {
+  BentoNodeCard,
+  GaugeNodeCard,
+  HealthNodeCard,
+  HeroNodeCard,
+  RingNodeCard,
+  RouteNodeCard,
+} from "./LayoutCards";
 import { NodeListView } from "./NodeListView";
 import { RegionTabs } from "./RegionTabs";
 import {
@@ -71,11 +79,30 @@ const GRID_LAYOUT: Record<NodeViewMode, { className: string; minColumnWidth: num
   large: { className: "node-grid grid gap-4 xl:gap-5", minColumnWidth: 360 },
   compact: { className: "node-grid grid gap-3 xl:gap-4", minColumnWidth: 340 },
   mini: { className: "node-grid grid gap-3 xl:gap-3.5", minColumnWidth: 260 },
+  ring: { className: "node-grid grid gap-3 xl:gap-4", minColumnWidth: 340 },
+  hero: { className: "node-grid grid gap-3 xl:gap-4", minColumnWidth: 340 },
+  route: { className: "node-grid grid gap-3 xl:gap-4", minColumnWidth: 360 },
+  bento: { className: "node-grid grid gap-3 xl:gap-4", minColumnWidth: 340 },
+  health: { className: "node-grid grid gap-3 xl:gap-4", minColumnWidth: 320 },
+  gauge: { className: "node-grid grid gap-3 xl:gap-4", minColumnWidth: 340 },
   // 占位以满足 Record 穷尽。
   list: { className: "", minColumnWidth: 0 },
 };
 
 type MiniGridStyle = CSSProperties & { "--mini-card-min-width": string };
+
+/** 每种卡片视图用哪个卡片组件（列表档不在这里，它整页是一张表，见 NodeListView）。 */
+const CARD_COMPONENTS: Record<Exclude<NodeViewMode, "list">, ComponentType<{ uuid: string }>> = {
+  large: NodeCard,
+  compact: CompactNodeCard,
+  mini: MiniNodeCard,
+  ring: RingNodeCard,
+  hero: HeroNodeCard,
+  route: RouteNodeCard,
+  bento: BentoNodeCard,
+  health: HealthNodeCard,
+  gauge: GaugeNodeCard,
+};
 
 // 标准 UUID 不含逗号，可安全拼成稳定签名。
 const UUID_KEY_SEPARATOR = ",";
@@ -813,28 +840,17 @@ export function NodeGrid() {
   const visibleUuids = useMemo(() => visibleNodes.map((node) => node.uuid), [visibleNodes]);
   // 列表档由下方 NodeListView 渲染,这里不必构造卡片元素。
   const cards = useMemo(
-    () =>
-      mode === "list"
-        ? null
-        : orderedUuids.map((uuid) => (
-            <div key={uuid} className="relative min-w-0">
-              {mode === "mini" ? (
-                <MiniNodeCard
-                  uuid={uuid}
-                />
-              ) : mode === "compact" ? (
-                <CompactNodeCard
-                  uuid={uuid}
-                />
-              ) : (
-                <NodeCard
-                  uuid={uuid}
-                />
-              )}
-              {/* 截图打码的选机器模式才渲染；平时返回 null。 */}
-              <MaskPickOverlay uuid={uuid} />
-            </div>
-          )),
+    () => {
+      if (mode === "list") return null;
+      const CardComponent = CARD_COMPONENTS[mode];
+      return orderedUuids.map((uuid) => (
+        <div key={uuid} className="relative min-w-0">
+          <CardComponent uuid={uuid} />
+          {/* 截图打码的选机器模式才渲染；平时返回 null。 */}
+          <MaskPickOverlay uuid={uuid} />
+        </div>
+      ));
+    },
     [orderedUuids, mode],
   );
   const showGroupTabs =
