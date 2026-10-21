@@ -811,6 +811,9 @@ export const zh = {
   "health.grade.bad": "告警",
   "skin.name.cockpit": "座舱",
   "skin.tag.cockpit": "仪表",
+  "ping.settingHidden": "设置里隐藏了 {n} 条 · 显示",
+  "ping.settingHiddenShown": "收起设置里隐藏的 {n} 条",
+  "ping.settingHiddenTitle": "设置 → 延迟线路 里对这台隐藏的线路默认不画；点一下临时显示，不改设置。",
   // @@entries
 } as const;
 

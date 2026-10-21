@@ -126,6 +126,15 @@ export function isHomepagePingVisible(uuid: string, taskId: number, settings: Pi
   return explainHomepagePingVisibility(uuid, taskId, settings).visible;
 }
 
+/** 按设置过滤一台机器要显示的线路，详情页的延迟图也用它：设置里隐藏的线路首页和详情页都不画。 */
+export function filterVisiblePingTasks<T extends { id: number }>(
+  tasks: readonly T[],
+  uuid: string,
+  settings: PingDisplaySettings,
+): T[] {
+  return tasks.filter((task) => isHomepagePingVisible(uuid, task.id, settings));
+}
+
 /** 首页这条线路为什么显示 / 隐藏：单条设置、本台协议组、全站默认，或线路不分协议（始终显示）。 */
 export type PingVisibilitySource = "line" | "group" | "global" | "other";
 

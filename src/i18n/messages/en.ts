@@ -809,5 +809,8 @@ export const en: Messages = {
   "health.grade.bad": "Alert",
   "skin.name.cockpit": "Cockpit",
   "skin.tag.cockpit": "Gauges",
+  "ping.settingHidden": "{n} hidden in settings · show",
+  "ping.settingHiddenShown": "Hide the {n} set as hidden",
+  "ping.settingHiddenTitle": "Lines hidden for this server in settings are left out by default. Click to show them for now without changing settings.",
   // @@entries
 };

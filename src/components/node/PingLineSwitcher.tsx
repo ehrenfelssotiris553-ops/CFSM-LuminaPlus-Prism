@@ -17,6 +17,7 @@ import {
 } from "@/hooks/usePingOverview";
 import { useCarrierNames } from "@/hooks/usePublicConfig";
 import { useThemeSettings } from "@/hooks/useThemeSettings";
+import { isHomepagePingVisible } from "@/utils/pingVisibility";
 import { CARRIER_TASKS, carrierTaskName } from "@/services/cfsm/mappers";
 import { setPingLineOverrides } from "@/services/pingLineOverrideStore";
 import {
@@ -103,7 +104,15 @@ function PingLineMenu({
   onClose: (restoreFocus: boolean) => void;
 }) {
   const panelRef = useRef<HTMLDivElement | null>(null);
-  const { homepageMultiPingTaskIds, homepagePingLineOverrides } = useThemeSettings();
+  const {
+    homepageMultiPingTaskIds,
+    homepagePingLineOverrides,
+    showPingIpv4,
+    showPingIpv6,
+    homepagePingGroupOverrides,
+    homepagePingProtocols,
+    homepagePingVisibilityOverrides,
+  } = useThemeSettings();
   const overrides = useNodePingLineOverrides(uuid);
   const available = useAvailablePingTaskIds(uuid);
   const carrierNames = useCarrierNames();
@@ -116,8 +125,18 @@ function PingLineMenu({
   const currentTaskId = displayed[slot];
   // 有数据的线路才列（后端对没配探测目标的槽位下发 false，换过去只会是一行「无样本」）；
   // 正在显示的几条哪怕暂时没数据也列上，否则找不到当前选中项，也没法把它换回来。
+  // 设置里对这台隐藏的线路不列：换过去那一行会直接消失，像是点坏了（当前这条除外，免得找不到选中项）。
   const options = CARRIER_TASKS.filter(
-    (task) => available.includes(task.id) || displayed.includes(task.id),
+    (task) =>
+      (available.includes(task.id) || displayed.includes(task.id)) &&
+      (task.id === currentTaskId ||
+        isHomepagePingVisible(uuid, task.id, {
+          showPingIpv4,
+          showPingIpv6,
+          homepagePingGroupOverrides,
+          homepagePingProtocols,
+          homepagePingVisibilityOverrides,
+        })),
   ).map((task) => task.id);
   // 没有生效的本机覆盖时 resolve 原样返回默认那份数组，引用不同就说明本机换过。
   const customized = displayed !== nodeDefault;

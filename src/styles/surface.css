@@ -2115,6 +2115,23 @@ body::after {
   border-radius: calc(3px * var(--radius-scale, 1));
 }
 
+/* 详情页延迟图例末尾：设置里隐藏了几条线路，点一下临时放出来。 */
+.instance-ping-hidden-toggle {
+  padding: 5px 11px;
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-weight: 550;
+  white-space: nowrap;
+}
+
+.instance-ping-hidden-toggle:hover,
+.instance-ping-hidden-toggle[aria-pressed="true"] {
+  border-color: var(--border-strong);
+  color: var(--text-secondary);
+}
+
 .instance-ping-task {
   display: inline-flex;
   align-items: center;

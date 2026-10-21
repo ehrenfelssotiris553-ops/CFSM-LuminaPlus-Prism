@@ -6,6 +6,8 @@ import { Eye, EyeOff, RefreshCw } from "lucide-react";
 import { usePingRecords } from "@/hooks/useRecords";
 import { useCarrierNames } from "@/hooks/usePublicConfig";
 import { carrierTaskName } from "@/services/cfsm/mappers";
+import { useThemeSettings } from "@/hooks/useThemeSettings";
+import { filterVisiblePingTasks } from "@/utils/pingVisibility";
 import { InstancePanel, InstanceChartLoading } from "./InstancePanel";
 import {
   buildChartTooltipHooks,
@@ -155,7 +157,7 @@ export function PingChart({
   // （或 config 晚于历史返回）不会让那份缓存重算，所以在这里按当前名字重新贴一遍。
   const carrierNames = useCarrierNames();
   // API 顺序与后台任务权重一致，响应本身不一定包含可重排的权重。
-  const tasks = useMemo(
+  const allTasks = useMemo(
     () =>
       (data?.tasks ?? []).map((task) => ({
         ...task,
@@ -163,6 +165,29 @@ export function PingChart({
       })),
     [carrierNames, data],
   );
+  // 设置页「延迟线路」里隐藏的线路（V4 / V6 默认、本台协议组、单条设置）详情页也不画，和首页一致：
+  // 只有 V4 的机器把 V6 线路关了，详情页原来还照画一条全是丢包的 V6。图例旁留个按钮，想看时临时放出来。
+  const {
+    showPingIpv4,
+    showPingIpv6,
+    homepagePingGroupOverrides,
+    homepagePingProtocols,
+    homepagePingVisibilityOverrides,
+  } = useThemeSettings();
+  const [showSettingHidden, setShowSettingHidden] = useState(false);
+  const settingVisibleTasks = useMemo(
+    () =>
+      filterVisiblePingTasks(allTasks, uuid, {
+        showPingIpv4,
+        showPingIpv6,
+        homepagePingGroupOverrides,
+        homepagePingProtocols,
+        homepagePingVisibilityOverrides,
+      }),
+    [allTasks, homepagePingGroupOverrides, homepagePingProtocols, homepagePingVisibilityOverrides, showPingIpv4, showPingIpv6, uuid],
+  );
+  const settingHiddenCount = allTasks.length - settingVisibleTasks.length;
+  const tasks = showSettingHidden ? allTasks : settingVisibleTasks;
   const taskLabels = useMemo(() => {
     const counts = new Map<string, number>();
     for (const task of tasks) {
@@ -198,6 +223,7 @@ export function PingChart({
 
   useEffect(() => {
     setHiddenTasks(new Set());
+    setShowSettingHidden(false);
   }, [uuid]);
 
   useEffect(() => {
@@ -682,6 +708,17 @@ export function PingChart({
             </button>
           );
         })}
+        {settingHiddenCount > 0 && (
+          <button
+            type="button"
+            className="instance-ping-hidden-toggle"
+            aria-pressed={showSettingHidden}
+            onClick={() => setShowSettingHidden((value) => !value)}
+            title={t("ping.settingHiddenTitle")}
+          >
+            {t(showSettingHidden ? "ping.settingHiddenShown" : "ping.settingHidden", { n: settingHiddenCount })}
+          </button>
+        )}
       </div>
 
       {showLoss && chart && lossRows.length > 0 && (

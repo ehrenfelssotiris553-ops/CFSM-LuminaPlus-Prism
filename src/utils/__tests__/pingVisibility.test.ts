@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyPingVisibilityEdits, diffPingVisibility, isHomepagePingVisible, LOCAL_PING_VISIBILITY_EDITS_KEY, mergePingVisibilityEdits, normalizePingVisibility, normalizePingVisibilityEdits, migratePingDisplaySettings, migrateLocalPingPreferences, pingTaskProtocol, setPingVisibilityMode } from "@/utils/pingVisibility";
+import { applyPingVisibilityEdits, diffPingVisibility, filterVisiblePingTasks, isHomepagePingVisible, LOCAL_PING_VISIBILITY_EDITS_KEY, mergePingVisibilityEdits, normalizePingVisibility, normalizePingVisibilityEdits, migratePingDisplaySettings, migrateLocalPingPreferences, pingTaskProtocol, setPingVisibilityMode } from "@/utils/pingVisibility";
 import { mergeLocalThemeSettingsEdits, mergeThemeSettingsLayers, normalizeThemeSettings } from "@/utils/themeSettings";
 
 describe("per-node homepage ping visibility", () => {
@@ -122,5 +122,17 @@ describe("explainHomepagePingVisibility", () => {
       expect(explainHomepagePingVisibility(uuid, taskId, settings)).toEqual(expected);
       expect(isHomepagePingVisible(uuid, taskId, settings)).toBe(expected.visible);
     }
+  });
+});
+
+describe("detail page ping lines", () => {
+  it("leaves out lines hidden in settings, e.g. V6 turned off for a V4-only machine", () => {
+    const settings = normalizeThemeSettings({
+      homepagePingGroupOverrides: { v4only: { ipv6: false } },
+      homepagePingProtocols: { 1: "ipv4", 2: "ipv4", 4: "ipv6", 5: "ipv6" },
+    });
+    const tasks = [{ id: 1 }, { id: 2 }, { id: 4 }, { id: 5 }, { id: 7 }];
+    expect(filterVisiblePingTasks(tasks, "v4only", settings).map((task) => task.id)).toEqual([1, 2, 7]);
+    expect(filterVisiblePingTasks(tasks, "dual", settings).map((task) => task.id)).toEqual([1, 2, 4, 5, 7]);
   });
 });
