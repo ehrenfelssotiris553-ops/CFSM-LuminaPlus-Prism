@@ -515,6 +515,7 @@ export interface ThemeSettings {
   quickShowAppearance?: boolean;
   quickShowViewMode?: boolean;
   quickShowColors?: boolean;
+  quickShowMask?: boolean;
   showPingChart?: boolean;
   homepagePingBindings?: Record<string, string[]>;
   homepageDefaultPingTaskId?: number;

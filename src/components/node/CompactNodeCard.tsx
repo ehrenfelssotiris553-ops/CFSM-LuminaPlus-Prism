@@ -109,10 +109,13 @@ function CompactGauge({
 function CompactInfoTile({
   label,
   color,
+  field,
   children,
 }: {
   label: string;
   color: string;
+  /** 截图打码按它找到「计费」格（见 styles/mask.css）。 */
+  field?: string;
   children: ReactNode;
 }) {
   const style = { "--compact-info-color": color } as CSSProperties;
@@ -120,6 +123,7 @@ function CompactInfoTile({
   return (
     <div
       className="compact-node-info-tile"
+      data-field={field}
       style={style}
       aria-label={label}
     >
@@ -555,6 +559,7 @@ function CompactNodeInfoStrip({
         <CompactInfoTile
           label={t("card.billing")}
           color="var(--status-success)"
+          field="billing"
         >
           <CompactInfoRow
             icon={<Calendar size={12} strokeWidth={2.1} />}
@@ -746,7 +751,7 @@ export const CompactNodeCard = memo(function CompactNodeCard({
   const uptimeLabel = showUptime && !isOffline ? formatCompactUptime(node.uptime) : "";
 
   return (
-    <article className={clsx("compact-node-card", isOffline && "is-offline")}>
+    <article className={clsx("compact-node-card", isOffline && "is-offline")} data-mask={model.maskTokens}>
       <CompactNodeHeader
         node={node}
         osName={osName}

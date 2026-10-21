@@ -12,6 +12,8 @@ import {
   withLiveLatency,
 } from "@/hooks/usePingOverview";
 import { useThemeSettings } from "@/hooks/useThemeSettings";
+import { useNodeMask } from "@/hooks/useScreenshotMask";
+import { maskNodeLike, maskPrice, maskText, maskTokens } from "@/utils/screenshotMask";
 import { isHomepagePingVisible } from "@/utils/pingVisibility";
 import { resolveIpStackVisibility } from "@/utils/ipStack";
 import { carrierTaskName } from "@/services/cfsm/mappers";
@@ -51,6 +53,10 @@ export function shouldRenderHomepagePingBars(
   return hasRealHomepagePingBinding || pingIsAssigned;
 }
 
+function maskRenewalPrice(price: string | null): string | null {
+  return price ? maskPrice(price) : price;
+}
+
 export function useNodeCardModel(
   uuid: string,
   {
@@ -59,6 +65,8 @@ export function useNodeCardModel(
   }: NodeCardModelOptions = {},
 ) {
   const { meta, metrics, trafficTrend } = useNodeCardSnapshots(uuid);
+  // 截图打码：被选中的机器在这里就把文字换成假内容，四种卡片拿到的都是假的（见 utils/screenshotMask）。
+  const mask = useNodeMask(uuid);
   const {
     showCardGroup,
     showCardPrice,
@@ -195,9 +203,14 @@ export function useNodeCardModel(
 
   const metaModel = useMemo(() => {
     if (!meta) return null;
-    const tags = parseTags(meta.tags);
-    const group = showCardGroup ? meta.group : undefined;
-    const subtitleParts = [group, meta.public_remark]
+    const maskTags = mask?.tags === true;
+    const tags = parseTags(meta.tags).map((tag) =>
+      maskTags ? { label: maskText(tag.label), color: "gray" } : tag,
+    );
+    const rawGroup = showCardGroup ? meta.group : undefined;
+    const group = rawGroup && maskTags ? maskText(rawGroup) : rawGroup;
+    const remark = meta.public_remark && maskTags ? maskText(meta.public_remark) : meta.public_remark;
+    const subtitleParts = [group, remark]
       .map((part) => part?.trim())
       .filter((part): part is string => Boolean(part));
     const subtitleLabels = new Set(subtitleParts.map((part) => part.toLowerCase()));
@@ -216,16 +229,19 @@ export function useNodeCardModel(
       footerTags: fallbackFooterTags,
       compactFooterTags,
       subtitle: joinDisplayParts(subtitleParts),
-      expire: formatExpireDays(meta.expired_at, now),
-      expireColor: getExpireTextColor(meta.expired_at, now),
+      expire: mask?.price
+        ? { value: "••", unit: "", tone: "none" as const }
+        : formatExpireDays(meta.expired_at, now),
+      expireColor: mask?.price ? "var(--text-tertiary)" : getExpireTextColor(meta.expired_at, now),
       // 「卡片显示价格」只作用于大卡片（NodeCard 自己收敛）；小卡片等布局照旧显示，
       // 未填价格显示「免费」。
       showCardPrice,
-      renewalPrice: formatRenewalPrice(meta),
+      renewalPrice: mask?.price ? maskRenewalPrice(formatRenewalPrice(meta)) : formatRenewalPrice(meta),
+      maskTokens: maskTokens(mask),
       osName: resolveOsInfo(meta.os).name,
       loadBaseline: meta.cpu_cores > 0 ? meta.cpu_cores : 4,
     };
-  }, [meta, now, showCardGroup, showCardPrice, showIpv4, showIpv6, homepageIpStackOverrides]);
+  }, [meta, now, showCardGroup, showCardPrice, showIpv4, showIpv6, homepageIpStackOverrides, mask]);
 
   // ping 派生的颜色只在 ping item 变化时才变。
   const pingModel = useMemo(
@@ -296,7 +312,8 @@ export function useNodeCardModel(
     };
 
     return {
-      node: { ...meta, ...metrics },
+      // 打码时名称换成假内容、地区清空（国旗变成一块灰色色块）。
+      node: { ...maskNodeLike(meta, mask), ...metrics },
       trafficTrend,
       ping,
       pingBuckets,
@@ -322,5 +339,6 @@ export function useNodeCardModel(
     ping,
     pingBuckets,
     trafficTrend,
+    mask,
   ]);
 }

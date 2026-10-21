@@ -1,14 +1,17 @@
 import { ArrowUpCircle } from "lucide-react";
 import { t } from "@/i18n";
 import { useAgentUpdate } from "@/hooks/useAgentUpdate";
+import { useMaskLookup } from "@/hooks/useScreenshotMask";
 import { getAdminUrl } from "@/services/cfsm/config";
 import { formatNodeNames } from "@/utils/offlineAlerts";
 import { formatVersionLabel } from "@/utils/versionCompare";
 
 /** 站长条展开后的「N 台 Agent 可更新到 vX」，带「忽略此版本」和后台入口。 */
 export function AgentUpdateNotice() {
-  const { latest, outdated, ignore } = useAgentUpdate();
-  if (outdated.length === 0) return null;
+  const { latest, outdated: rawOutdated, ignore } = useAgentUpdate();
+  const mask = useMaskLookup();
+  if (rawOutdated.length === 0) return null;
+  const outdated = rawOutdated.map(mask.node);
 
   const allNames = outdated
     .map((node) => t("agentUpdate.nodeVersion", { name: node.name, version: formatVersionLabel(node.agent_version) }))

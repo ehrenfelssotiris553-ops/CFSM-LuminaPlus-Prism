@@ -469,7 +469,7 @@ export const MiniNodeCard = memo(function MiniNodeCard({
   } = model;
 
   return (
-    <article className={clsx("mini-node-card", isOffline && "is-offline")}>
+    <article className={clsx("mini-node-card", isOffline && "is-offline")} data-mask={model.maskTokens}>
       <MiniHeader
         node={node}
         osName={osName}

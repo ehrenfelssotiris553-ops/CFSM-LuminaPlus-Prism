@@ -109,6 +109,7 @@ export const NodeCard = memo(function NodeCard({
   return (
     <article
       className={clsx("server-card", isOffline && "is-offline")}
+      data-mask={model.maskTokens}
     >
       <div className="server-card-content">
         <NodeCardHeader

@@ -2,6 +2,8 @@ import { t } from "@/i18n";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { CircleDollarSign, X } from "lucide-react";
+import { useMaskLookup } from "@/hooks/useScreenshotMask";
+import { maskPrice, maskText } from "@/utils/screenshotMask";
 import {
   EMPTY_RENEWAL_REMINDER_PREFERENCES,
   formatRenewalReminderExpiry,
@@ -71,6 +73,7 @@ export function RenewalReminder({
   const [open, setOpen] = useState(false);
   const [clock, setClock] = useState(() => Date.now());
   const [preferences, setPreferences] = useState(readPreferences);
+  const mask = useMaskLookup();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
@@ -165,7 +168,16 @@ export function RenewalReminder({
 
   if (visibleReminders.length === 0) return <AssetLink />;
 
-  const rows = visibleReminders.slice(0, MAX_VISIBLE_ROWS);
+  // 截图打码的机器：名称、价格、到期天数都换掉（和首页卡片一致）。
+  const rows = visibleReminders.slice(0, MAX_VISIBLE_ROWS).map((item) => {
+    const fields = mask.fieldsOf(item.uuid);
+    return {
+      ...item,
+      name: fields?.name ? maskText(item.name) : item.name,
+      priceLabel: fields?.price ? maskPrice(item.priceLabel) : item.priceLabel,
+      expiryLabel: fields?.price ? "••" : formatRenewalReminderExpiry(item.daysRemaining),
+    };
+  });
   const hiddenCount = visibleReminders.length - rows.length;
 
   return (
@@ -217,7 +229,7 @@ export function RenewalReminder({
               <div className="renewal-reminder-row" key={item.cycleKey}>
                 <div className="renewal-reminder-row-main">
                   <strong title={item.name}>{item.name}</strong>
-                  <span>{formatRenewalReminderExpiry(item.daysRemaining)}</span>
+                  <span>{item.expiryLabel}</span>
                   <span>{item.priceLabel}</span>
                 </div>
                 <span className="renewal-reminder-status" data-tone={item.tone}>

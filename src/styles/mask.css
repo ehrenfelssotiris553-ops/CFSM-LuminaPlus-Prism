@@ -1,0 +1,203 @@
+/*
+ * 截图打码（见 utils/screenshotMask）。
+ * 文字在数据层已经换成同样长度的假内容，这里只负责「看起来像毛玻璃」：卡片根元素的 data-mask
+ * 列出要模糊的字段，模糊的是假内容，截图里还原不出真名。国旗换成灰色色块，不用模糊。
+ */
+[data-mask~="name"] :is(.server-card-title-link, .compact-node-title, .mini-node-title, .node-list-name),
+[data-mask~="tags"] :is(.server-card-subtitle, .compact-node-subtitle, .compact-node-tag, .mini-node-tag, .dstatus-tag-chip),
+[data-mask~="price"] :is(.dstatus-price-chip, .mini-node-price-tag, [data-field="billing"] .compact-node-info-row-value) {
+  filter: blur(4px);
+  user-select: none;
+}
+
+/* 名称字大，模糊得重一点才看不出字形。 */
+[data-mask~="name"] :is(.server-card-title-link, .compact-node-title, .mini-node-title, .node-list-name) {
+  filter: blur(6px);
+}
+
+/* 总览里被遮住的资产金额。 */
+.mask-blur {
+  filter: blur(5px);
+  user-select: none;
+}
+
+/* ---------- 选机器模式 ---------- */
+
+.mask-pick-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-a) 6%, transparent);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--text-tertiary) 40%, transparent);
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.mask-pick-overlay:hover {
+  box-shadow: inset 0 0 0 1.5px var(--accent-500);
+}
+
+.mask-pick-overlay[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--accent-500) 7%, transparent);
+  box-shadow: inset 0 0 0 2px var(--accent-500);
+}
+
+.mask-pick-overlay:focus-visible {
+  outline: 2px solid var(--accent-500);
+  outline-offset: 2px;
+}
+
+.mask-pick-check {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  border: 1.5px solid color-mix(in srgb, var(--text-tertiary) 70%, transparent);
+  border-radius: 999px;
+  background: var(--surface-a);
+  color: #fff;
+  box-shadow: 0 2px 8px -4px rgba(0, 0, 0, 0.45);
+}
+
+.mask-pick-overlay .mask-pick-check {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+:is(.mask-pick-overlay[aria-pressed="true"], .node-list-row[data-picked]) .mask-pick-check {
+  border-color: var(--accent-500);
+  background: var(--accent-500);
+}
+
+/* 列表档的行本身是链接，里面不能再放按钮：整行变成可点选，左边一个勾。 */
+.node-list-row[data-picking] {
+  cursor: pointer;
+}
+
+.node-list-row[data-picked] {
+  background: color-mix(in srgb, var(--accent-500) 7%, transparent);
+  box-shadow: inset 3px 0 0 var(--accent-500);
+}
+
+.node-list-row .mask-pick-check {
+  width: 18px;
+  height: 18px;
+}
+
+/* 底部提示条：手机上拇指够得着，也不挡首页顶部。 */
+.mask-pick-bar {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 95;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 24px);
+  padding: 6px 6px 6px 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-elev-a) 88%, transparent);
+  box-shadow: 0 18px 40px -20px rgba(0, 0, 0, 0.55);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  transform: translateX(-50%);
+  backdrop-filter: blur(14px) saturate(1.4);
+}
+
+.mask-pick-bar > svg {
+  flex: 0 0 auto;
+  color: var(--accent-500);
+}
+
+.mask-pick-bar-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mask-pick-bar-count {
+  color: var(--text-primary);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mask-pick-bar-button {
+  height: 30px;
+  flex: 0 0 auto;
+  padding: 0 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: var(--surface-sunken);
+  color: var(--text-primary);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.mask-pick-bar-button.is-primary {
+  border-color: transparent;
+  background: var(--accent-500);
+  color: #fff;
+}
+
+@media (max-width: 480px) {
+  .mask-pick-bar-text {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mask-pick-overlay {
+    transition: none;
+  }
+}
+
+/* ---------- 设置页 ---------- */
+
+.mask-field-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mask-field-chip {
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mask-field-chip[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--accent-500) 55%, transparent);
+  background: color-mix(in srgb, var(--accent-500) 12%, transparent);
+  color: var(--accent-500);
+}
+
+.mask-node-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  gap: 8px;
+}
+
+.mask-node-item {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}

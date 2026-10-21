@@ -118,6 +118,7 @@ export interface ResolvedThemeSettings {
   quickShowAppearance: boolean;
   quickShowViewMode: boolean;
   quickShowColors: boolean;
+  quickShowMask: boolean;
   showPingChart: boolean;
   homepagePingBindings: HomepagePingTaskBindings;
   homepageDefaultPingTaskId: number;
@@ -191,6 +192,7 @@ export const DEFAULT_THEME_SETTINGS: ResolvedThemeSettings = {
   quickShowAppearance: true,
   quickShowViewMode: true,
   quickShowColors: true,
+  quickShowMask: true,
   showPingChart: true,
   homepagePingBindings: {},
   homepageDefaultPingTaskId: DEFAULT_HOMEPAGE_PING_TASK_ID,
@@ -360,6 +362,7 @@ export function normalizeThemeSettings(
     quickShowAppearance: enabledUnlessFalse(settings?.quickShowAppearance),
     quickShowViewMode: enabledUnlessFalse(settings?.quickShowViewMode),
     quickShowColors: enabledUnlessFalse(settings?.quickShowColors),
+    quickShowMask: enabledUnlessFalse(settings?.quickShowMask),
     showPingChart: enabledUnlessFalse(settings?.showPingChart),
     homepagePingBindings: normalizeHomepagePingTaskBindings(settings?.homepagePingBindings),
     // 单线路模式下「没单独绑过的节点显示哪条」。写死电信时，全站绑联通的站点每加一台新节点

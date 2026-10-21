@@ -10,6 +10,7 @@ import { useThemeSettings } from "@/hooks/useThemeSettings";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useHourlyClock } from "@/hooks/useClock";
 import { useVisibleNodes } from "@/hooks/useVisibleNodes";
+import { useMaskLookup } from "@/hooks/useScreenshotMask";
 import {
   calculateCostSummary,
   formatCnyMoney,
@@ -124,6 +125,7 @@ export function Assets() {
   const isMobileLayout = useMediaQuery(ASSETS_MOBILE_QUERY);
   const now = useHourlyClock();
   const themeSettings = useThemeSettings();
+  const mask = useMaskLookup();
   const forceRateRefresh = useRef(false);
   const nodes = useVisibleNodes();
   // 资产详情页是风险核对入口：这里始终按真实到期数据展示，不读取首页的关闭/稍后偏好。
@@ -174,8 +176,9 @@ export function Assets() {
         (a.key - b.key) * direction || compareText(a.detail.name, b.detail.name)
       );
     });
-    return rows.map(({ detail }) => detail);
-  }, [sortDirection, sortField, summary]);
+    // 截图打码在排好序之后再换名称，按名称排序时顺序不受影响。
+    return rows.map(({ detail }) => mask.node(detail));
+  }, [sortDirection, sortField, summary, mask]);
   const exchangeRateRows = useMemo(() => {
     if (!rateQuery.data?.rates.CNY) return [];
     const rates = rateQuery.data.rates;

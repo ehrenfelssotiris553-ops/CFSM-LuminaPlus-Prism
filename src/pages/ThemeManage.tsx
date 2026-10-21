@@ -1,5 +1,6 @@
 import { IpStackEditor } from "@/components/theme/IpStackEditor";
 import { OfflineNotifyToggle } from "@/components/theme/OfflineNotifyToggle";
+import { ScreenshotMaskSettings } from "@/components/theme/ScreenshotMaskSettings";
 import { PingDisplayEditor } from "@/components/theme/PingDisplayEditor";
 import { t } from "@/i18n";
 import {
@@ -312,6 +313,7 @@ function pickManagedThemeSettings(settings: ResolvedThemeSettings) {
     quickShowAppearance: settings.quickShowAppearance,
     quickShowViewMode: settings.quickShowViewMode,
     quickShowColors: settings.quickShowColors,
+    quickShowMask: settings.quickShowMask,
     enableAdminButton: settings.enableAdminButton,
     homepagePingBindings: settings.homepagePingBindings,
     homepageDefaultPingTaskId: settings.homepageDefaultPingTaskId,
@@ -1804,6 +1806,13 @@ export function ThemeManage() {
                     onPatch={patch}
                   />
                   <ToggleRow
+                    field="quickShowMask"
+                    title={t("settings.quickMask")}
+                    desc={t("settings.quickMaskDesc")}
+                    checked={draft.quickShowMask}
+                    onPatch={patch}
+                  />
+                  <ToggleRow
                     field="enableAdminButton"
                     title={t("settings.quickAdmin")}
                     desc={t("settings.quickAdminDesc")}
@@ -1873,6 +1882,14 @@ export function ThemeManage() {
                   />
                   <OfflineNotifyToggle />
                 </div>
+              </InstancePanel>
+              <InstancePanel
+                id="set-screenshot-mask"
+                kicker={t("settings.kickerAppearance")}
+                title={t("mask.title")}
+                aside={<EyeOff size={16} />}
+              >
+                <ScreenshotMaskSettings />
               </InstancePanel>
             </>
           )}

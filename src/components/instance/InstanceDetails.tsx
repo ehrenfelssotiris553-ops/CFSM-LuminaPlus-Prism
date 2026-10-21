@@ -1,6 +1,7 @@
 import { memoByLanguage, t } from "@/i18n";
 import { useEffect, type ReactNode } from "react";
 import { useNodeMeta, useNodeMetrics } from "@/hooks/useNode";
+import { useMaskLookup } from "@/hooks/useScreenshotMask";
 import { InstanceSwitcher } from "./InstanceSwitcher";
 import {
   formatBytes,
@@ -36,6 +37,7 @@ export function InstanceDetails({
 }) {
   const meta = useNodeMeta(uuid);
   const metrics = useNodeMetrics(uuid);
+  const mask = useMaskLookup();
   const { showIpv4, showIpv6, homepageIpStackOverrides, showAgentUpdateHint, agentUpdateIgnoredVersion } = useThemeSettings();
   const { data: me } = useAuth();
   const { data: config } = usePublicConfig();
@@ -63,7 +65,7 @@ export function InstanceDetails({
     metrics.updatedAt > 0 ? timeFormatter().format(metrics.updatedAt) : "—";
   // 和首页卡片同一套规则（全站默认 + 每台单独设置），首页显示什么这里就显示什么。
   const ipStack = resolveIpStackVisibility(meta, { showIpv4, showIpv6, homepageIpStackOverrides });
-  const trimmedName = meta.name?.trim();
+  const trimmedName = meta.name?.trim() ? mask.name(uuid, meta.name.trim()) : undefined;
   const panelTitle = trimmedName
     ? t("instance.panelTitle", { name: trimmedName })
     : t("instance.panelTitleFallback");

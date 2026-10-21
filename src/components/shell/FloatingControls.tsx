@@ -7,6 +7,9 @@ import { useViewMode } from "@/hooks/useViewMode";
 import { useNodeStoreStatus } from "@/hooks/useNode";
 import { useAuth } from "@/hooks/useAuth";
 import { useThemeSettings } from "@/hooks/useThemeSettings";
+import { useScreenshotMask } from "@/hooks/useScreenshotMask";
+import { MaskIcon } from "@/components/node/MaskPicker";
+import { toggleScreenshotMask } from "@/utils/screenshotMask";
 import { getAdminUrl } from "@/services/cfsm/config";
 import type { NodeViewMode } from "@/utils/themeSettings";
 import { readQuickControlsExpanded, writeQuickControlsExpanded } from "@/utils/quickControlsStorage";
@@ -54,6 +57,8 @@ export function FloatingControls({
   const showAppearance = settingsReady && themeSettings.quickShowAppearance;
   const showViewMode = settingsReady && themeSettings.quickShowViewMode;
   const showColorPicker = settingsReady && themeSettings.quickShowColors;
+  const showMask = settingsReady && themeSettings.quickShowMask;
+  const mask = useScreenshotMask();
   const showSyncWarning = failureStreak >= 2;
   const hiddenTabIndex = collapsed ? -1 : undefined;
   const ToggleIcon = collapsed ? ChevronLeft : ChevronRight;
@@ -142,6 +147,22 @@ export function FloatingControls({
                 )}
               >
                 <Palette size={16} />
+              </button>
+            )}
+            {showMask && (
+              <button
+                type="button"
+                onClick={toggleScreenshotMask}
+                aria-label={t("quick.mask")}
+                aria-pressed={mask.on}
+                title={t(mask.on ? "quick.maskOff" : "quick.mask")}
+                tabIndex={hiddenTabIndex}
+                className={clsx(
+                  "control-button grid h-9 w-9 place-items-center",
+                  mask.on && "control-toggle is-active",
+                )}
+              >
+                <MaskIcon />
               </button>
             )}
             {showThemeManage && (

@@ -7,6 +7,7 @@ import { useMinuteClock } from "@/hooks/useClock";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useTodayTrafficStats } from "@/hooks/useTodayTrafficStats";
 import { useVisibleNodes } from "@/hooks/useVisibleNodes";
+import { useMaskLookup } from "@/hooks/useScreenshotMask";
 import { formatByteRateLabel, formatBytes } from "@/utils/format";
 import type { NodeInfo } from "@/types/cfsm";
 import type { TodayTrafficSample, TodayTrafficStat } from "@/utils/trafficStats";
@@ -136,6 +137,7 @@ export function Traffic() {
   const nodes = useVisibleNodes();
   const uuids = useMemo(() => nodes.map((node) => node.uuid), [nodes]);
   const trafficQuery = useTodayTrafficStats(uuids, now);
+  const mask = useMaskLookup();
   const details = useMemo<TrafficDetail[]>(() => {
     const stats = new Map(trafficQuery.data?.rows.map((row) => [row.uuid, row] as const));
     return nodes
@@ -151,7 +153,8 @@ export function Traffic() {
           sampleCount: 0,
           hasSamples: false,
         };
-        return { node, stat, total: stat.trafficUp + stat.trafficDown };
+        // 截图打码：名称、国旗换掉；排序不看名称，换了不影响顺序。
+        return { node: mask.node(node), stat, total: stat.trafficUp + stat.trafficDown };
       })
       .sort(
         (left, right) =>
@@ -159,7 +162,7 @@ export function Traffic() {
           right.total - left.total ||
           left.node.weight - right.node.weight,
       );
-  }, [nodes, trafficQuery.data?.rows]);
+  }, [nodes, trafficQuery.data?.rows, mask]);
   const { sampledDetails, totalUp, totalDown, peakUp, peakDown } = useMemo(() => {
     const sampled = details.filter((detail) => detail.stat.hasSamples);
     return {

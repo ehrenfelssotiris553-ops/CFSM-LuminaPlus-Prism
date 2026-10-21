@@ -58,6 +58,9 @@ import {
 } from "@/utils/ipStack";
 import { RenewalReminder } from "./RenewalReminder";
 import { OwnerStrip } from "./OwnerStrip";
+import { MaskPickBar, MaskPickOverlay } from "./MaskPicker";
+import { useMaskAsset } from "@/hooks/useScreenshotMask";
+import { maskPrice } from "@/utils/screenshotMask";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import type { NodeViewMode } from "@/utils/themeSettings";
 import type { RenewalReminderSource } from "@/utils/renewalReminder";
@@ -159,8 +162,12 @@ function HomeOverviewCards({
     overview.totalNodes > 0 ? (overview.onlineNodes / overview.totalNodes) * 100 : 0;
   const offlinePct =
     overview.totalNodes > 0 ? (overview.offlineNodes / overview.totalNodes) * 100 : 0;
+  // 截图打码勾了「总览资产」：金额数字换成 x 再模糊，评级（「小有资产」之类）也不显示，免得猜出大概。
+  const maskAsset = useMaskAsset() && costSummary !== null;
   const remainingValue = costSummary
-    ? formatCnyMoney(costSummary.remainingCny)
+    ? maskAsset
+      ? maskPrice(formatCnyMoney(costSummary.remainingCny))
+      : formatCnyMoney(costSummary.remainingCny)
     : costLoading
       ? t("home.assetsCalculating")
       : "—";
@@ -185,7 +192,7 @@ function HomeOverviewCards({
         })
       : null;
   const assetRating =
-    showOverviewRatings && showAssetRating && costSummary
+    showOverviewRatings && showAssetRating && costSummary && !maskAsset
       ? getOverviewRating({
           kind: "asset",
           value: costSummary.remainingCny,
@@ -209,7 +216,16 @@ function HomeOverviewCards({
         trafficUnit={trafficUnit}
         bandwidthTitle={bandwidthDetailLabel}
         trafficTitle={trafficDetailLabel}
-        assetValue={costSummary ? formatStripMoney(costSummary.remainingCny) : costLoading ? "…" : "—"}
+        assetValue={
+          costSummary
+            ? maskAsset
+              ? maskPrice(formatStripMoney(costSummary.remainingCny))
+              : formatStripMoney(costSummary.remainingCny)
+            : costLoading
+              ? "…"
+              : "—"
+        }
+        assetMasked={maskAsset}
         showAssetCard={showAssetCard}
         showDetailButton={showDetailButton}
         renewalReminderDays={renewalReminderDays}
@@ -318,7 +334,7 @@ function HomeOverviewCards({
           )}
         </div>
         <div className="overview-card-main">
-          <p className="overview-card-value">{remainingValue}</p>
+          <p className={maskAsset ? "overview-card-value mask-blur" : "overview-card-value"}>{remainingValue}</p>
         </div>
         <div className="overview-card-footer">
           <p className="overview-card-caption">
@@ -351,6 +367,7 @@ function HomeOverviewStrip({
   bandwidthTitle,
   trafficTitle,
   assetValue,
+  assetMasked,
   showAssetCard,
   showDetailButton,
   renewalReminderDays,
@@ -364,6 +381,7 @@ function HomeOverviewStrip({
   bandwidthTitle: string;
   trafficTitle: string;
   assetValue: string;
+  assetMasked: boolean;
   showAssetCard: boolean;
   showDetailButton: boolean;
   renewalReminderDays: number;
@@ -408,9 +426,9 @@ function HomeOverviewStrip({
         </span>
       </div>
       {showAssetCard ? (
-        <div className="home-overview-strip-cell" title={assetValue}>
+        <div className="home-overview-strip-cell" title={assetMasked ? undefined : assetValue}>
           <span className="home-overview-strip-label">{t("home.strip.assets")}</span>
-          <span className="home-overview-strip-value">{assetValue}</span>
+          <span className={assetMasked ? "home-overview-strip-value mask-blur" : "home-overview-strip-value"}>{assetValue}</span>
         </div>
       ) : null}
       {showAssetCard && showDetailButton ? (
@@ -791,13 +809,14 @@ export function NodeGrid() {
     () => (uuidsKey ? uuidsKey.split(UUID_KEY_SEPARATOR) : []),
     [uuidsKey],
   );
+  const visibleUuids = useMemo(() => visibleNodes.map((node) => node.uuid), [visibleNodes]);
   // 列表档由下方 NodeListView 渲染,这里不必构造卡片元素。
   const cards = useMemo(
     () =>
       mode === "list"
         ? null
         : orderedUuids.map((uuid) => (
-            <div key={uuid} className="min-w-0">
+            <div key={uuid} className="relative min-w-0">
               {mode === "mini" ? (
                 <MiniNodeCard
                   uuid={uuid}
@@ -811,6 +830,8 @@ export function NodeGrid() {
                   uuid={uuid}
                 />
               )}
+              {/* 截图打码的选机器模式才渲染；平时返回 null。 */}
+              <MaskPickOverlay uuid={uuid} />
             </div>
           )),
     [orderedUuids, mode],
@@ -976,6 +997,7 @@ export function NodeGrid() {
         />
       )}
       {isList ? <NodeListView uuids={orderedUuids} /> : gridElement}
+      <MaskPickBar uuids={orderedUuids} allUuids={visibleUuids} />
     </>
   );
 }
