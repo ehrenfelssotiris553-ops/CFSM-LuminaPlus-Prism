@@ -57,8 +57,8 @@ import {
   type IpStackCategory,
 } from "@/utils/ipStack";
 import { RenewalReminder } from "./RenewalReminder";
-import { AgentUpdateNotice } from "./AgentUpdateNotice";
-import { CfUsagePanel } from "./CfUsagePanel";
+import { OwnerStrip } from "./OwnerStrip";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import type { NodeViewMode } from "@/utils/themeSettings";
 import type { RenewalReminderSource } from "@/utils/renewalReminder";
 
@@ -127,9 +127,12 @@ function HomeOverviewCards({
   renewalReminderDays,
   renewalNodes,
   dense,
+  compact,
   stackCounts,
 }: {
   overview: HomeOverview;
+  /** 手机：总览压成一行四格，首页一打开就能看到机器（见 HomeOverviewStrip）。 */
+  compact: boolean;
   /** 双栈 / 仅 V4 / 仅 V6 节点数；不显示统计时为 null。 */
   stackCounts: Record<IpStackCategory, number> | null;
   costSummary: { remainingCny: number } | null;
@@ -195,6 +198,25 @@ function HomeOverviewCards({
         .map((category) => stackCountLabel(category, stackCounts[category]))
         .join(" · ")
     : "";
+
+  if (compact) {
+    return (
+      <HomeOverviewStrip
+        overview={overview}
+        rateValue={rate.value}
+        rateUnit={rate.unit}
+        trafficValue={trafficValue}
+        trafficUnit={trafficUnit}
+        bandwidthTitle={bandwidthDetailLabel}
+        trafficTitle={trafficDetailLabel}
+        assetValue={costSummary ? formatStripMoney(costSummary.remainingCny) : costLoading ? "…" : "—"}
+        showAssetCard={showAssetCard}
+        showDetailButton={showDetailButton}
+        renewalReminderDays={renewalReminderDays}
+        renewalNodes={renewalNodes}
+      />
+    );
+  }
 
   const renderRating = (rating: OverviewRating | null) =>
     rating ? (
@@ -310,6 +332,96 @@ function HomeOverviewCards({
   );
 }
 
+/** 一行四格里放得下的金额：上千元不要小数，¥ 后不留空格。 */
+function formatStripMoney(value: number): string {
+  const amount = Math.abs(value) >= 1000 ? Math.round(value).toLocaleString("zh-CN") : value.toFixed(2);
+  return `¥${amount}`;
+}
+
+/**
+ * 手机上的总览：在线 / 实时 / 累计 / 资产排成一行，不左右滑。比两行四张卡省下一百多像素，
+ * 评级、双栈统计这些次要信息手机上不放（电脑上的四张卡照旧）。续费提醒 / 资产入口放在这一行最右边。
+ */
+function HomeOverviewStrip({
+  overview,
+  rateValue,
+  rateUnit,
+  trafficValue,
+  trafficUnit,
+  bandwidthTitle,
+  trafficTitle,
+  assetValue,
+  showAssetCard,
+  showDetailButton,
+  renewalReminderDays,
+  renewalNodes,
+}: {
+  overview: HomeOverview;
+  rateValue: string;
+  rateUnit: string;
+  trafficValue: string;
+  trafficUnit: string;
+  bandwidthTitle: string;
+  trafficTitle: string;
+  assetValue: string;
+  showAssetCard: boolean;
+  showDetailButton: boolean;
+  renewalReminderDays: number;
+  renewalNodes: RenewalReminderSource[];
+}) {
+  // MB/s → M/s：一格只有八十来像素宽。
+  const shortRateUnit = rateUnit.length > 3 ? `${rateUnit[0]}/s` : rateUnit;
+  return (
+    <section
+      className="home-overview-strip"
+      data-cells={showAssetCard ? 4 : 3}
+      aria-label={t("home.overviewLabel")}
+    >
+      <div className="home-overview-strip-cell">
+        <span className="home-overview-strip-label">
+          {t("home.strip.online")}
+          {overview.offlineNodes > 0 ? (
+            <span
+              className="home-overview-strip-alert"
+              role="img"
+              aria-label={t("home.strip.offline", { n: overview.offlineNodes })}
+            />
+          ) : null}
+        </span>
+        <span className="home-overview-strip-value">
+          {overview.onlineNodes}
+          <span className="home-overview-strip-unit">/{overview.totalNodes}</span>
+        </span>
+      </div>
+      <div className="home-overview-strip-cell" title={bandwidthTitle}>
+        <span className="home-overview-strip-label">{t("home.strip.bandwidth")}</span>
+        <span className="home-overview-strip-value" style={{ color: speedRateColor(rateUnit) }}>
+          {rateValue}
+          <span className="home-overview-strip-unit">{shortRateUnit}</span>
+        </span>
+      </div>
+      <div className="home-overview-strip-cell" title={trafficTitle}>
+        <span className="home-overview-strip-label">{t("home.strip.traffic")}</span>
+        <span className="home-overview-strip-value">
+          {trafficValue}
+          <span className="home-overview-strip-unit">{trafficUnit}</span>
+        </span>
+      </div>
+      {showAssetCard ? (
+        <div className="home-overview-strip-cell" title={assetValue}>
+          <span className="home-overview-strip-label">{t("home.strip.assets")}</span>
+          <span className="home-overview-strip-value">{assetValue}</span>
+        </div>
+      ) : null}
+      {showAssetCard && showDetailButton ? (
+        <div className="home-overview-strip-extra">
+          <RenewalReminder nodes={renewalNodes} warningDays={renewalReminderDays} />
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function GroupTabs({
   groups,
   selectedGroup,
@@ -392,6 +504,8 @@ function StackTabs({
 
 export function NodeGrid() {
   const now = useHourlyClock();
+  // 和 home.css 里手机布局的断点一致。
+  const isPhone = useMediaQuery("(max-width: 680px)");
   const nodes = useHomeNodeSummaries();
   const nodeOnlineSummaries = useNodeOnlineSummaries();
   const allMeta = useAllNodeMeta();
@@ -784,6 +898,7 @@ export function NodeGrid() {
         <HomeOverviewCards
           overview={displayOverview}
           dense={mode === "mini" || mode === "list"}
+          compact={isPhone}
           showDetailButton={showCostDetailButton}
           showAssetCard={showAssetCard}
           renewalReminderDays={
@@ -808,9 +923,8 @@ export function NodeGrid() {
           assetRatingLabels={themeSettings.assetRatingLabels}
         />
       )}
-      {/* 下面两块只有登录站长看得到，各自判断登录态和开关，访客这里什么都不渲染、也不发请求。 */}
-      <AgentUpdateNotice />
-      <CfUsagePanel />
+      {/* 只有登录站长看得到：访客这里什么都不渲染、也不发请求。 */}
+      <OwnerStrip />
     </>
   );
 

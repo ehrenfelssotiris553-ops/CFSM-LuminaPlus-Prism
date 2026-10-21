@@ -700,8 +700,6 @@ export const zh = {
   "agentUpdate.ignoreTitle": "{version} 不再提醒，Agent 出了更新的版本会再提醒",
   "settings.agentUpdateIgnored": "已忽略 {version} 的更新提醒，出了更新的版本会再提醒。",
   "settings.agentUpdateRestore": "恢复提醒",
-  "cfUsage.expand": "展开 CF 用量",
-  "cfUsage.collapse": "收起 CF 用量",
   "cfUsage.notQueried": "未查询",
   "cfUsage.failedShort": "查询失败",
   "cfUsage.short.rowsRead": "D1 读取",
@@ -709,6 +707,15 @@ export const zh = {
   "cfUsage.short.workersRequests": "Workers",
   "cfUsage.short.durableObjectsRequests": "DO 请求",
   "cfUsage.short.durableObjectsDuration": "DO 时长",
+  "owner.title": "站长",
+  "owner.expand": "展开站长信息",
+  "owner.collapse": "收起站长信息",
+  "owner.agentChip": "{n} 台可更新",
+  "home.strip.online": "在线",
+  "home.strip.bandwidth": "实时",
+  "home.strip.traffic": "累计",
+  "home.strip.assets": "资产",
+  "home.strip.offline": "{n} 台离线",
   // @@entries
 } as const;
 

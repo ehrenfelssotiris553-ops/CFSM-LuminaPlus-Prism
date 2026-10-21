@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { getLocale, memoByLanguage, t, type MessageKey } from "@/i18n";
 import { useCfUsage } from "@/hooks/useCfUsage";
 import { useMinuteClock } from "@/hooks/useClock";
@@ -10,7 +10,6 @@ import {
   cfUsageResetTime,
   classifyCfUsageError,
   formatCfUsagePercent,
-  topCfUsageMeters,
   type CfUsageMetric,
 } from "@/utils/cfUsage";
 
@@ -33,33 +32,14 @@ const METRIC_LABEL_KEYS: Record<CfUsageMetric, MessageKey> = {
   durableObjectsDuration: "cfUsage.durableObjectsDuration",
 };
 
-/** 收起时摘要用的短名字，一行放得下两项。 */
-const METRIC_SHORT_KEYS: Record<CfUsageMetric, MessageKey> = {
+/** 站长条收起时摘要用的短名字。 */
+export const METRIC_SHORT_KEYS: Record<CfUsageMetric, MessageKey> = {
   rowsRead: "cfUsage.short.rowsRead",
   rowsWritten: "cfUsage.short.rowsWritten",
   workersRequests: "cfUsage.short.workersRequests",
   durableObjectsRequests: "cfUsage.short.durableObjectsRequests",
   durableObjectsDuration: "cfUsage.short.durableObjectsDuration",
 };
-
-/** 展开还是收起记在这台设备上；默认收起，手机上首页不被它占掉半屏。 */
-const EXPANDED_STORAGE_KEY = "cfsm-luminaplus:cf-usage-expanded";
-
-function readExpanded(): boolean {
-  try {
-    return window.localStorage.getItem(EXPANDED_STORAGE_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
-function writeExpanded(expanded: boolean) {
-  try {
-    window.localStorage.setItem(EXPANDED_STORAGE_KEY, expanded ? "1" : "0");
-  } catch {
-    // 存不了（隐私模式等）就只在这次打开页面内有效。
-  }
-}
 
 function updatedLabel(updatedAt: number, now: number): string {
   const minutes = Math.floor((now - updatedAt) / 60_000);
@@ -105,72 +85,25 @@ function UsageError({ error }: { error: unknown }) {
 }
 
 /**
- * 首页 CF 用量（只有登录站长看得到）：今天 / 昨天的 D1 读写、Workers 请求、DO 请求和时长，对比免费版每日额度。
- * 数据和后台「查询 CF 用量」按钮是同一个请求，查几次看设置里的「刷新方式」。
- * 默认收起成一行：只列今天用得最多的两项，点开看全部。
+ * 首页 CF 用量的完整内容（只有登录站长看得到）：今天 / 昨天的 D1 读写、Workers 请求、DO 请求和时长，对比免费版每日额度。
+ * 放在站长条展开后的区域里，收起 / 展开由 OwnerStrip 管。数据和后台「查询 CF 用量」按钮是同一个请求，查几次看「刷新方式」。
  */
 export function CfUsagePanel() {
   const { visible, mode, query } = useCfUsage();
   const [day, setDay] = useState<UsageDay>("today");
-  const [expanded, setExpanded] = useState(readExpanded);
   const hasData = query.data !== undefined;
   const now = useMinuteClock(visible && hasData);
   if (!visible) return null;
 
   const fetching = query.isFetching;
   const meters = query.data ? cfUsageMeters(query.data[day]) : null;
-  const summary = query.data ? topCfUsageMeters(cfUsageMeters(query.data.today)) : [];
   const locale = getLocale();
-  const updated = fetching ? t("cfUsage.loading") : hasData ? updatedLabel(query.dataUpdatedAt, now) : "";
-  const toggle = () =>
-    setExpanded((previous) => {
-      writeExpanded(!previous);
-      return !previous;
-    });
-  const collapsedStatus = fetching
-    ? t("cfUsage.loading")
-    : query.isError
-      ? t("cfUsage.failedShort")
-      : mode === "manual"
-        ? t("cfUsage.notQueried")
-        : t("cfUsage.loading");
 
   return (
-    <section
-      className="cf-usage"
-      data-expanded={expanded ? "true" : "false"}
-      aria-label={t("cfUsage.title")}
-      aria-busy={fetching}
-    >
+    <section className="cf-usage" aria-label={t("cfUsage.title")} aria-busy={fetching}>
       <div className="cf-usage-head">
-        <button
-          type="button"
-          className="cf-usage-toggle"
-          aria-expanded={expanded}
-          title={t(expanded ? "cfUsage.collapse" : "cfUsage.expand")}
-          onClick={toggle}
-        >
-          <span className="overview-card-label">{t("cfUsage.title")}</span>
-          {!expanded ? (
-            <span className="cf-usage-chips">
-              {summary.length > 0 ? (
-                summary.map((meter) => (
-                  <span key={meter.metric} className="cf-usage-chip" data-level={meter.level}>
-                    <span className="cf-usage-chip-dot" aria-hidden />
-                    {t(METRIC_SHORT_KEYS[meter.metric])} {formatCfUsagePercent(meter.ratio)}
-                  </span>
-                ))
-              ) : (
-                <span className="cf-usage-chip" data-level={query.isError ? "danger" : undefined}>
-                  {query.isError ? <span className="cf-usage-chip-dot" aria-hidden /> : null}
-                  {collapsedStatus}
-                </span>
-              )}
-            </span>
-          ) : null}
-          <ChevronDown size={14} aria-hidden className="cf-usage-chevron" />
-        </button>
-        {expanded && hasData ? (
+        <span className="overview-card-label">{t("cfUsage.title")}</span>
+        {hasData ? (
           <div className="instance-segmented cf-usage-day" role="group" aria-label={t("cfUsage.dayLabel")}>
             {(["today", "yesterday"] as const).map((option) => (
               <button
@@ -185,63 +118,61 @@ export function CfUsagePanel() {
             ))}
           </div>
         ) : null}
-        {expanded ? <span className="cf-usage-updated">{updated}</span> : null}
+        <span className="cf-usage-updated">
+          {fetching ? t("cfUsage.loading") : hasData ? updatedLabel(query.dataUpdatedAt, now) : ""}
+        </span>
         <button
           type="button"
           className="overview-card-action cf-usage-refresh"
           data-spinning={fetching ? "true" : undefined}
           disabled={fetching}
           onClick={() => void query.refetch()}
-          title={updated && !expanded ? `${t("cfUsage.refresh")} · ${updated}` : t("cfUsage.refresh")}
+          title={t("cfUsage.refresh")}
           aria-label={t("cfUsage.refresh")}
         >
           <RefreshCw size={14} aria-hidden />
         </button>
       </div>
 
-      {expanded ? (
-        <>
-          {query.isError ? <UsageError error={query.error} /> : null}
+      {query.isError ? <UsageError error={query.error} /> : null}
 
-          {meters ? (
-            <div className="cf-usage-grid">
-              {meters.map((meter) => (
-                <div
-                  key={meter.metric}
-                  className="cf-usage-meter"
-                  data-level={meter.level}
-                  title={meterTitle(meter.metric, query.data?.[day])}
-                >
-                  <div className="cf-usage-meter-top">
-                    <span className="cf-usage-meter-label">{t(METRIC_LABEL_KEYS[meter.metric])}</span>
-                    <span className="cf-usage-meter-pct">{formatCfUsagePercent(meter.ratio)}</span>
-                  </div>
-                  <div
-                    className="cf-usage-bar"
-                    role="progressbar"
-                    aria-label={t(METRIC_LABEL_KEYS[meter.metric])}
-                    aria-valuemin={0}
-                    aria-valuemax={meter.limit}
-                    aria-valuenow={Math.min(meter.used, meter.limit)}
-                    aria-valuetext={`${plainNumber().format(meter.used)} / ${plainNumber().format(meter.limit)}`}
-                  >
-                    <span style={{ width: `${Math.min(100, meter.ratio * 100)}%` }} />
-                  </div>
-                  <span className="cf-usage-meter-value">
-                    {compactNumber().format(meter.used)} / {compactNumber().format(meter.limit)}
-                  </span>
-                </div>
-              ))}
+      {meters ? (
+        <div className="cf-usage-grid">
+          {meters.map((meter) => (
+            <div
+              key={meter.metric}
+              className="cf-usage-meter"
+              data-level={meter.level}
+              title={meterTitle(meter.metric, query.data?.[day])}
+            >
+              <div className="cf-usage-meter-top">
+                <span className="cf-usage-meter-label">{t(METRIC_LABEL_KEYS[meter.metric])}</span>
+                <span className="cf-usage-meter-pct">{formatCfUsagePercent(meter.ratio)}</span>
+              </div>
+              <div
+                className="cf-usage-bar"
+                role="progressbar"
+                aria-label={t(METRIC_LABEL_KEYS[meter.metric])}
+                aria-valuemin={0}
+                aria-valuemax={meter.limit}
+                aria-valuenow={Math.min(meter.used, meter.limit)}
+                aria-valuetext={`${plainNumber().format(meter.used)} / ${plainNumber().format(meter.limit)}`}
+              >
+                <span style={{ width: `${Math.min(100, meter.ratio * 100)}%` }} />
+              </div>
+              <span className="cf-usage-meter-value">
+                {compactNumber().format(meter.used)} / {compactNumber().format(meter.limit)}
+              </span>
             </div>
-          ) : !query.isError ? (
-            <p className="cf-usage-message" role="status">
-              {fetching || mode !== "manual" ? t("cfUsage.loading") : t("cfUsage.manualHint")}
-            </p>
-          ) : null}
-
-          <p className="cf-usage-note">{t("cfUsage.note", { time: cfUsageResetTime(locale) })}</p>
-        </>
+          ))}
+        </div>
+      ) : !query.isError ? (
+        <p className="cf-usage-message" role="status">
+          {fetching || mode !== "manual" ? t("cfUsage.loading") : t("cfUsage.manualHint")}
+        </p>
       ) : null}
+
+      <p className="cf-usage-note">{t("cfUsage.note", { time: cfUsageResetTime(locale) })}</p>
     </section>
   );
 }

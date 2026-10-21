@@ -698,8 +698,6 @@ export const en: Messages = {
   "agentUpdate.ignoreTitle": "Stop reminding about {version}; you'll be reminded again when a newer agent is released",
   "settings.agentUpdateIgnored": "Reminders for {version} are ignored. You'll be reminded again when a newer version is released.",
   "settings.agentUpdateRestore": "Remind me again",
-  "cfUsage.expand": "Show CF usage",
-  "cfUsage.collapse": "Hide CF usage",
   "cfUsage.notQueried": "Not loaded",
   "cfUsage.failedShort": "Query failed",
   "cfUsage.short.rowsRead": "D1 reads",
@@ -707,5 +705,14 @@ export const en: Messages = {
   "cfUsage.short.workersRequests": "Workers",
   "cfUsage.short.durableObjectsRequests": "DO requests",
   "cfUsage.short.durableObjectsDuration": "DO duration",
+  "owner.title": "Owner",
+  "owner.expand": "Show owner info",
+  "owner.collapse": "Hide owner info",
+  "owner.agentChip": "{n} to update",
+  "home.strip.online": "Online",
+  "home.strip.bandwidth": "Live",
+  "home.strip.traffic": "Total",
+  "home.strip.assets": "Assets",
+  "home.strip.offline": "{n} offline",
   // @@entries
 };

@@ -1219,39 +1219,51 @@
   gap: 6px 10px;
 }
 
-/* 默认收起：只剩标题行，上下留白也收一点，手机上首页别被它占掉。 */
-.cf-usage[data-expanded="false"] {
-  padding-block: 8px;
+/* 站长条：Agent 提醒和 CF 用量收在一起，默认收起成一行。 */
+.owner-strip {
+  margin-bottom: 16px;
+  overflow: hidden;
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  background: var(--surface-a);
 }
 
-.cf-usage-toggle {
+.owner-strip-toggle {
   display: flex;
-  min-width: 0;
-  min-height: 32px;
-  flex: 1 1 auto;
+  width: 100%;
+  min-height: 46px;
   align-items: center;
   gap: 8px;
-  padding: 0;
+  padding: 0 14px;
   border: 0;
   background: transparent;
-  color: inherit;
+  color: var(--text-primary);
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
 
-.cf-usage[data-expanded="true"] .cf-usage-toggle {
-  flex: 0 1 auto;
+.owner-strip-icon {
+  flex: 0 0 auto;
+  color: var(--text-secondary);
 }
 
-.cf-usage-chips {
+.owner-strip-title {
+  flex: 0 0 auto;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.owner-strip-chips {
   display: flex;
   min-width: 0;
+  flex: 1 1 auto;
   gap: 6px;
   overflow: hidden;
 }
 
-.cf-usage-chip {
+.owner-strip-chip {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
@@ -1267,7 +1279,7 @@
   white-space: nowrap;
 }
 
-.cf-usage-chip-dot {
+.owner-strip-chip-dot {
   width: 6px;
   height: 6px;
   flex: 0 0 auto;
@@ -1275,24 +1287,38 @@
   background: var(--status-success);
 }
 
-.cf-usage-chip[data-level="warn"] .cf-usage-chip-dot { background: var(--status-warning); }
-.cf-usage-chip[data-level="danger"] .cf-usage-chip-dot { background: var(--status-error); }
+.owner-strip-chip[data-level="warn"] .owner-strip-chip-dot { background: var(--status-warning); }
+.owner-strip-chip[data-level="danger"] .owner-strip-chip-dot { background: var(--status-error); }
 
-.cf-usage-chevron {
+.owner-strip-chevron {
   flex: 0 0 auto;
   color: var(--text-tertiary);
   transition: transform 160ms ease;
 }
 
-.cf-usage[data-expanded="true"] .cf-usage-chevron {
+.owner-strip[data-expanded="true"] .owner-strip-chevron {
   transform: rotate(180deg);
 }
 
-/* 很窄的手机只放用得最多的那一项。 */
-@media (max-width: 380px) {
-  .cf-usage-chip + .cf-usage-chip {
-    display: none;
-  }
+.owner-strip-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--hairline);
+}
+
+/* 展开区里的两块不再各自带边框和外边距，由站长条统一包住。 */
+.owner-strip-body .cf-usage {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.owner-strip-body .home-admin-notice {
+  margin: 0;
 }
 
 /* 窄屏时 .instance-segmented 会被拉成整行宽（详情页图表控件要这样），这里两个小按钮保持自身宽度。 */
@@ -1423,4 +1449,77 @@
   color: var(--text-tertiary);
   font-size: 11px;
   line-height: 1.5;
+}
+
+/* ---- 手机总览：一行四格（在线 / 实时 / 累计 / 资产），不左右滑 ---- */
+
+.home-overview-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 10px 4px;
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  background: var(--surface-a);
+}
+
+.home-overview-strip[data-cells="3"] {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+}
+
+.home-overview-strip-cell {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 0 4px;
+}
+
+.home-overview-strip-cell + .home-overview-strip-cell {
+  border-left: 1px solid var(--hairline);
+}
+
+.home-overview-strip-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.home-overview-strip-alert {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--status-error);
+}
+
+.home-overview-strip-value {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-overview-strip-unit {
+  margin-left: 2px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.home-overview-strip-extra {
+  display: flex;
+  align-items: center;
+  padding: 0 6px 0 4px;
+  border-left: 1px solid var(--hairline);
 }
