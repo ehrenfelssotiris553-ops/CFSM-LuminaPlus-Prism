@@ -1,6 +1,9 @@
 import { IpStackEditor } from "@/components/theme/IpStackEditor";
 import { OfflineNotifyToggle } from "@/components/theme/OfflineNotifyToggle";
 import { ScreenshotMaskSettings } from "@/components/theme/ScreenshotMaskSettings";
+import { SkinSettings } from "@/components/theme/SkinSettings";
+import { applySkin } from "@/components/shell/BackgroundLayer";
+import { skinStyleOf, type SkinStyle } from "@/utils/skin";
 import { PingDisplayEditor } from "@/components/theme/PingDisplayEditor";
 import { t } from "@/i18n";
 import {
@@ -373,6 +376,12 @@ function pickManagedThemeSettings(settings: ResolvedThemeSettings) {
     ),
     costRateApiUrl: settings.costRateApiUrl,
     surfaceOpacity: settings.surfaceOpacity,
+    skin: settings.skin,
+    skinAccent: settings.skinAccent,
+    skinRadius: settings.skinRadius,
+    skinDensity: settings.skinDensity,
+    skinNumericFont: settings.skinNumericFont,
+    mySkin: settings.mySkin,
   };
 }
 
@@ -1014,6 +1023,18 @@ export function ThemeManage() {
     },
     [],
   );
+  // 风格的几项可以一起改（套用「我的风格」、恢复默认），只改传进来的那几项，基于前值合并。
+  const patchSkinStyle = useCallback((next: Partial<SkinStyle>) => {
+    editVersionRef.current += 1;
+    setDraft((prev) => ({
+      ...prev,
+      ...(next.skin !== undefined ? { skin: next.skin } : null),
+      ...(next.accent !== undefined ? { skinAccent: next.accent } : null),
+      ...(next.radius !== undefined ? { skinRadius: next.radius } : null),
+      ...(next.density !== undefined ? { skinDensity: next.density } : null),
+      ...(next.numericFont !== undefined ? { skinNumericFont: next.numericFont } : null),
+    }));
+  }, []);
   // 绑定关系的三个入口(勾选/全选/清空)都是基于前值的函数式更新,单独收口。
   const patchBindings = useCallback(
     (updater: (prev: HomepagePingTaskBindings) => HomepagePingTaskBindings) => {
@@ -1456,6 +1477,31 @@ export function ThemeManage() {
    * 存之前把 lastSeededSignatureRef 钉到这份草稿：否则存完「当前生效的设置」变了、表单又不再 dirty，
    * 灌草稿的 effect 会拿归一化后的设置重灌一遍 —— 正在输入的多行文本会被吞掉末尾的逗号和换行。
    */
+  /*
+   * 风格即时预览：草稿一变就写到 <html>，不等自动保存（600ms 防抖）。离开设置页时换回当前生效的设置
+   * —— 草稿没存成（比如别的设置项填错了）也不会把没保存的风格留在页面上；存成了的话，
+   * BackgroundLayer 随后按新设置再写一次。
+   */
+  const draftSkinStyle = useMemo(
+    () =>
+      skinStyleOf({
+        skin: draft.skin,
+        skinAccent: draft.skinAccent,
+        skinRadius: draft.skinRadius,
+        skinDensity: draft.skinDensity,
+        skinNumericFont: draft.skinNumericFont,
+      }),
+    [draft.skin, draft.skinAccent, draft.skinRadius, draft.skinDensity, draft.skinNumericFont],
+  );
+  const sourceSkinStyleRef = useRef(skinStyleOf(sourceThemeSettings));
+  useEffect(() => {
+    sourceSkinStyleRef.current = skinStyleOf(sourceThemeSettings);
+  }, [sourceThemeSettings]);
+  useEffect(() => {
+    if (config) applySkin(draftSkinStyle);
+  }, [config, draftSkinStyle]);
+  useEffect(() => () => applySkin(sourceSkinStyleRef.current), []);
+
   const autoSaveRef = useRef<(() => void) | null>(null);
   useEffect(() => {
     autoSaveRef.current = null;
@@ -1691,6 +1737,20 @@ export function ThemeManage() {
         <div className="theme-manage-sections" ref={sectionsRef}>
           {activeTab === "appearance" && (
             <>
+              <InstancePanel
+                id="set-skin"
+                kicker={t("settings.kickerAppearance")}
+                title={t("skin.title")}
+                aside={<Sparkles size={16} />}
+              >
+                <SkinSettings
+                  value={draftSkinStyle}
+                  mySkin={draft.mySkin}
+                  onChange={patchSkinStyle}
+                  onSaveMine={() => patch("mySkin", draftSkinStyle)}
+                />
+              </InstancePanel>
+
               <InstancePanel
                 id="set-appearance"
                 kicker={t("settings.kickerAppearance")}

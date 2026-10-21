@@ -51,7 +51,7 @@ body::after {
 .surface-inset {
   background: var(--surface-sunken);
   border: 1px solid var(--hairline);
-  border-radius: 10px;
+  border-radius: calc(10px * var(--radius-scale, 1));
 }
 
 .theme-error-shell {
@@ -70,7 +70,7 @@ body::after {
   flex-direction: column;
   gap: 18px;
   border: 1px solid color-mix(in srgb, var(--border-strong) 54%, transparent);
-  border-radius: 18px;
+  border-radius: calc(18px * var(--radius-scale, 1));
   background: var(--surface);
   padding: 22px;
 }
@@ -159,7 +159,7 @@ body::after {
   max-width: calc(100vw - 1.5rem);
   padding: 10px 12px 10px 14px;
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: calc(16px * var(--radius-scale, 1));
   background: var(--surface);
   color: var(--text-primary);
   transform: translateX(-50%);
@@ -367,7 +367,7 @@ body::after {
   gap: 14px;
   padding: 14px;
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: calc(16px * var(--radius-scale, 1));
   background: var(--surface-elev);
   pointer-events: auto;
   -webkit-overflow-scrolling: touch;
@@ -431,7 +431,7 @@ body::after {
   flex-direction: column;
   gap: 9px;
   border: 1px solid var(--hairline);
-  border-radius: 11px;
+  border-radius: calc(11px * var(--radius-scale, 1));
   background: var(--surface-sunken);
   padding: 9px;
 }
@@ -449,7 +449,7 @@ body::after {
   justify-content: center;
   gap: 5px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   color: var(--text-tertiary);
   padding: 6px 4px;
   font-size: 10.5px;
@@ -477,7 +477,7 @@ body::after {
   height: 12px;
   flex: 0 0 auto;
   border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 4px;
+  border-radius: calc(4px * var(--radius-scale, 1));
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.22);
 }
 
@@ -547,7 +547,7 @@ body::after {
   display: flex;
   align-items: center;
   gap: 9px;
-  border-radius: 9px;
+  border-radius: calc(9px * var(--radius-scale, 1));
   padding: 5px 6px;
   transition: background 140ms ease;
 }
@@ -573,7 +573,7 @@ body::after {
   flex: none;
   width: 38px;
   height: 24px;
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   /* 双圈:内层白/黑发丝 + 外层描边,让浅色块在浅背景上也有边界。 */
   box-shadow:
     inset 0 0 0 1px color-mix(in srgb, white 40%, transparent),
@@ -607,7 +607,7 @@ body::after {
   flex: none;
   width: 24px;
   height: 24px;
-  border-radius: 7px;
+  border-radius: calc(7px * var(--radius-scale, 1));
   cursor: pointer;
   color: var(--text-tertiary);
   transition: color 160ms ease, background 160ms ease;
@@ -677,7 +677,7 @@ body::after {
   gap: 10px 12px;
   padding: 9px 14px;
   border: 1px solid var(--hairline);
-  border-radius: 16px;
+  border-radius: calc(16px * var(--radius-scale, 1));
   /* 必须完全不透明：半透明时下面滚过去的设置会透出来，看着像两层字叠在一起。
      用 --surface 而不是 --surface-a，后者会跟着「卡片透明度」一起变透。 */
   background: var(--surface);
@@ -1003,7 +1003,7 @@ body::after {
   gap: 8px;
   padding: 9px 12px;
   border: 1px solid transparent;
-  border-radius: 12px;
+  border-radius: calc(12px * var(--radius-scale, 1));
   color: var(--text-secondary);
   font-size: 12.5px;
   font-weight: 620;
@@ -1133,7 +1133,7 @@ body::after {
   gap: 10px 14px;
   padding: 14px 16px;
   border: 1px solid color-mix(in srgb, var(--progress-cpu) 16%, var(--hairline));
-  border-radius: 14px;
+  border-radius: calc(14px * var(--radius-scale, 1));
   background: color-mix(in srgb, var(--progress-cpu) 6%, var(--surface));
   color: var(--text-secondary);
   font-size: 13px;
@@ -1181,7 +1181,7 @@ body::after {
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--surface-a) 99%, white 1%) 0%, var(--surface-a) 100%);
   border: 1px solid var(--border);
-  border-radius: 20px;
+  border-radius: calc(20px * var(--radius-scale, 1));
   padding: 16px;
 }
 
@@ -1258,7 +1258,7 @@ body::after {
   height: 22px;
   padding: 0;
   border: 1px solid transparent;
-  border-radius: 7px;
+  border-radius: calc(7px * var(--radius-scale, 1));
   background: transparent;
   color: var(--text-tertiary);
   cursor: pointer;
@@ -1290,7 +1290,7 @@ body::after {
   gap: 2px;
   padding: 6px;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: calc(14px * var(--radius-scale, 1));
   background: var(--surface);
 }
 
@@ -1314,7 +1314,7 @@ body::after {
   width: 100%;
   min-height: 34px;
   padding: 0 10px;
-  border-radius: 10px;
+  border-radius: calc(10px * var(--radius-scale, 1));
   color: var(--text-secondary);
   font-size: 13px;
   font-weight: 500;
@@ -1435,7 +1435,7 @@ body::after {
 .instance-info-group {
   min-width: 0;
   border: 1px solid var(--border-subtle);
-  border-radius: 16px;
+  border-radius: calc(16px * var(--radius-scale, 1));
   background: color-mix(in srgb, var(--surface-elev) 92%, transparent);
   padding: 9px 12px;
 }
@@ -1514,7 +1514,7 @@ body::after {
   flex: 0 0 auto;
   place-items: center;
   border: 0;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   background: transparent;
   color: var(--text-tertiary);
   transition:
@@ -1640,7 +1640,7 @@ body::after {
   max-width: 100%;
   padding: 6px;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: calc(14px * var(--radius-scale, 1));
   background: var(--surface);
 }
 
@@ -1713,7 +1713,7 @@ body::after {
   gap: 6px;
   min-height: 30px;
   padding: 0 12px;
-  border-radius: 10px;
+  border-radius: calc(10px * var(--radius-scale, 1));
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 600;
@@ -1831,7 +1831,7 @@ body::after {
   overflow: hidden;
   /* 八张图同一个底色和描边（站长 2026-10-15）；各图的颜色只留在图标和线条上。 */
   border: 1px solid var(--border-subtle);
-  border-radius: 16px;
+  border-radius: calc(16px * var(--radius-scale, 1));
   padding: 11px 12px;
   background: var(--surface-elev);
   box-shadow:
@@ -1949,7 +1949,7 @@ body::after {
   max-width: 220px;
   pointer-events: none;
   border: 1px solid var(--border-strong);
-  border-radius: 10px;
+  border-radius: calc(10px * var(--radius-scale, 1));
   background: color-mix(in srgb, var(--surface) 94%, transparent);
   box-shadow: 0 14px 34px -18px rgba(0, 0, 0, 0.8);
   padding: 8px 9px;
@@ -2047,7 +2047,7 @@ body::after {
 .ping-loss-row canvas {
   display: block;
   flex: none;
-  border-radius: 3px;
+  border-radius: calc(3px * var(--radius-scale, 1));
 }
 
 .instance-ping-task {
@@ -2121,7 +2121,7 @@ body::after {
 
 @media (max-width: 720px) {
   .instance-panel {
-    border-radius: 16px;
+    border-radius: calc(16px * var(--radius-scale, 1));
   }
 
   /* 原来还有 padding-right: 88px（Komari 移植时带过来的，右边早就没有要让开的东西了），
@@ -2162,7 +2162,7 @@ body::after {
 
   .instance-chart-card {
     padding: 12px;
-    border-radius: 14px;
+    border-radius: calc(14px * var(--radius-scale, 1));
   }
 
   .instance-chart-card-head {
@@ -2219,7 +2219,7 @@ body::after {
   max-height: calc(100dvh - 2rem);
   overflow-y: auto;
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: calc(16px * var(--radius-scale, 1));
   background: var(--surface-elev);
   box-shadow: 0 24px 60px -30px rgba(0, 0, 0, 0.65);
   padding: 16px;
@@ -2278,7 +2278,7 @@ body::after {
 /* 成本那一段单独起一块底色——它是这个弹窗真正要用户看清的部分。 */
 .ping-health-cost {
   border: 1px solid var(--border-subtle);
-  border-radius: 10px;
+  border-radius: calc(10px * var(--radius-scale, 1));
   background: var(--surface-sunken);
   padding: 8px 10px;
 }
@@ -2415,7 +2415,7 @@ body::after {
 .ip-stack-row-effect .ip-stack-badge {
   height: 18px;
   padding: 0 0.375rem;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   font-size: 10px;
 }
 .ip-stack-row-control {
@@ -2469,7 +2469,7 @@ body::after {
 }
 .instance-ip-stack .ip-stack-badge {
   height: 20px;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
 }
 
 /* 详情页 Agent 版本：版本号后面跟「可更新」标签（只有登录站长看得到）。 */

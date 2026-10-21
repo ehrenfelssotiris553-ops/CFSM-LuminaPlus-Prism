@@ -11,6 +11,20 @@ import {
 
 import { DEFAULT_SURFACE_OPACITY, normalizeSurfaceOpacity } from "@/utils/background";
 import {
+  DEFAULT_SKIN_STYLE,
+  normalizeMySkin,
+  normalizeSkinAccent,
+  normalizeSkinDensity,
+  normalizeSkinId,
+  normalizeSkinNumericFont,
+  normalizeSkinRadius,
+  type SkinDensity,
+  type SkinId,
+  type SkinNumericFont,
+  type SkinRadius,
+  type SkinStyle,
+} from "@/utils/skin";
+import {
   DEFAULT_COST_RATE_API_URL,
   normalizeCostIgnoredNodes,
   normalizeCostPremiums,
@@ -182,6 +196,14 @@ export interface ResolvedThemeSettings {
   costPremiums: Record<string, CostPremiumEntry>;
   costRateApiUrl: string;
   surfaceOpacity: number;
+  /** 配色风格和四项自定义（见 utils/skin）。 */
+  skin: SkinId;
+  skinAccent: string;
+  skinRadius: SkinRadius;
+  skinDensity: SkinDensity;
+  skinNumericFont: SkinNumericFont;
+  /** 「另存为我的风格」存下的一套；没存过是 null。 */
+  mySkin: SkinStyle | null;
 }
 
 export const DEFAULT_THEME_SETTINGS: ResolvedThemeSettings = {
@@ -247,6 +269,12 @@ export const DEFAULT_THEME_SETTINGS: ResolvedThemeSettings = {
   costPremiums: {},
   costRateApiUrl: DEFAULT_COST_RATE_API_URL,
   surfaceOpacity: DEFAULT_SURFACE_OPACITY,
+  skin: DEFAULT_SKIN_STYLE.skin,
+  skinAccent: DEFAULT_SKIN_STYLE.accent,
+  skinRadius: DEFAULT_SKIN_STYLE.radius,
+  skinDensity: DEFAULT_SKIN_STYLE.density,
+  skinNumericFont: DEFAULT_SKIN_STYLE.numericFont,
+  mySkin: null,
 };
 
 /** 首页默认分组：只收非空字符串，长度掐在合理范围内（分组名来自后端）。 */
@@ -431,5 +459,11 @@ export function normalizeThemeSettings(
     costRateApiUrl: normalizeCostRateApiUrl(settings?.costRateApiUrl),
     // 默认开:让已配置背景图的存量站点升级后行为不变;关闭 = 保留 URL 但不加载背景图。
     surfaceOpacity: normalizeSurfaceOpacity(settings?.surfaceOpacity),
+    skin: normalizeSkinId(settings?.skin),
+    skinAccent: normalizeSkinAccent(settings?.skinAccent),
+    skinRadius: normalizeSkinRadius(settings?.skinRadius),
+    skinDensity: normalizeSkinDensity(settings?.skinDensity),
+    skinNumericFont: normalizeSkinNumericFont(settings?.skinNumericFont),
+    mySkin: normalizeMySkin(settings?.mySkin),
   };
 }

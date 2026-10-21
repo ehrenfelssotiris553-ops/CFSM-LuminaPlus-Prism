@@ -582,6 +582,13 @@ export interface ThemeSettings {
   >;
   costRateApiUrl?: string;
   surfaceOpacity?: number;
+  /** Lumina Prism 的配色风格（见 utils/skin）；IPStack 版不认这几项。 */
+  skin?: string;
+  skinAccent?: string;
+  skinRadius?: string;
+  skinDensity?: string;
+  skinNumericFont?: string;
+  mySkin?: unknown;
 }
 
 /** 图表用的一行历史负载记录，单位与 NodeMetrics 一致。 */

@@ -1,0 +1,561 @@
+/*
+ * 配色风格（设置 → 外观 → 风格，见 utils/skin.ts）。
+ *
+ * 「流光」就是原版：<html> 上没有 data-skin，这个文件里的规则一条都不生效，和改版前逐像素一致。
+ * 其它四套只换 tokens.css 里的颜色变量，再加少量结构差异（圆角倍数、字体、阴影、背景光）；
+ * 卡片、图表都读同一套变量，所以不用为每套风格各写一份卡片样式。
+ *
+ * 优先级：浅色写成 :not([data-appearance="dark"])，深色写成 [data-appearance="dark"]，
+ * 都比 tokens.css 的 :root[data-appearance] 多一级，不会被原版的深色变量盖住。
+ * 用户在快捷栏里改的指标配色是写在 <html> 行内的，照样压过这里 —— 自己挑的颜色优先。
+ */
+
+:root {
+  --skin-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
+    "PingFang SC", "Microsoft YaHei", monospace;
+  --skin-serif: "Songti SC", STSong, "Noto Serif SC", "Source Han Serif SC", "Noto Serif CJK SC",
+    SimSun, Georgia, serif;
+}
+
+/* ---------- 素白：纸张与墨色 ---------- */
+
+:root[data-skin="paper"] {
+  --radius-scale: 0;
+}
+
+:root[data-skin="paper"]:not([data-appearance="dark"]) {
+  --bg-0: #f5f2ea;
+  --surface: #fbf9f4;
+  --surface-elev: #fdfcf8;
+  --surface-sunken: #efeadf;
+  --border: #e0d9ca;
+  --border-subtle: #e9e3d6;
+  --border-strong: #cfc6b3;
+  --hairline: #e0d9ca;
+  --text-primary: #1c1b18;
+  --text-secondary: #4a4740;
+  --text-tertiary: #76726a;
+  --fill-secondary: rgba(28, 27, 24, 0.1);
+  --fill-tertiary: rgba(28, 27, 24, 0.05);
+  --hover-bg: #f1ece1;
+  --progress-bg: #e9e3d6;
+  --progress-cpu: #2b2a26;
+  --progress-memory: #6b5d4f;
+  --progress-swap: #9a5f14;
+  --progress-disk: #b8441a;
+  --progress-network: #4d6b57;
+  --progress-load: #8a6d3b;
+  --accent-500: #b8441a;
+  --accent-strong: #94360f;
+  --ring: rgba(184, 68, 26, 0.3);
+  --traffic-up: #2b2a26;
+  --traffic-down: #4d6b57;
+  --tag-gray-bg: #ebe5d8;
+  --tag-gray-fg: #4a4740;
+  --canvas-glow: none;
+}
+
+:root[data-skin="paper"][data-appearance="dark"] {
+  --bg-0: #161513;
+  --surface: #1c1b18;
+  --surface-elev: #22201c;
+  --surface-sunken: #121110;
+  --border: #33312c;
+  --border-subtle: #2a2824;
+  --border-strong: #4a4740;
+  --hairline: #33312c;
+  --text-primary: #ece7dc;
+  --text-secondary: #c4beb1;
+  --text-tertiary: #958f82;
+  --fill-secondary: rgba(236, 231, 220, 0.12);
+  --fill-tertiary: rgba(236, 231, 220, 0.06);
+  --hover-bg: #23211d;
+  --progress-bg: #2e2c27;
+  --progress-cpu: #ece7dc;
+  --progress-memory: #c2b39c;
+  --progress-swap: #e3ac5f;
+  --progress-disk: #ff8a5c;
+  --progress-network: #9cc2a6;
+  --progress-load: #d9b77a;
+  --accent-500: #ff8a5c;
+  --accent-strong: #e86e40;
+  --ring: rgba(255, 138, 92, 0.4);
+  --traffic-up: #ece7dc;
+  --traffic-down: #9cc2a6;
+  --tag-gray-bg: rgba(236, 231, 220, 0.1);
+  --tag-gray-fg: #ece7dc;
+}
+
+/* 标题和机器名用宋体，像一份打印的日报。 */
+:root[data-skin="paper"]
+  :is(
+    .home-brand-title,
+    .server-card-title-link,
+    .compact-node-title,
+    .mini-node-title,
+    .node-list-name,
+    .instance-panel-title,
+    .theme-topbar-title,
+    .overview-card-label
+  ) {
+  font-family: var(--skin-serif);
+  letter-spacing: 0.01em;
+}
+
+/* ---------- 雾玻璃：柔和光斑上的半透明卡片 ---------- */
+
+:root[data-skin="frost"] {
+  --radius-scale: 1.4;
+}
+
+:root[data-skin="frost"]:not([data-appearance="dark"]) {
+  --bg-0: #eef0f6;
+  --canvas-glow:
+    radial-gradient(70% 60% at 10% 10%, #ffd8c6 0%, rgba(255, 216, 198, 0) 70%),
+    radial-gradient(70% 60% at 95% 80%, #d9d4ff 0%, rgba(217, 212, 255, 0) 70%);
+  --surface: rgba(255, 255, 255, 0.58);
+  --surface-elev: #f7f6fb;
+  --surface-sunken: rgba(27, 33, 51, 0.05);
+  --border: rgba(255, 255, 255, 0.85);
+  --border-subtle: rgba(27, 33, 51, 0.06);
+  --border-strong: rgba(27, 33, 51, 0.14);
+  --hairline: rgba(27, 33, 51, 0.08);
+  --text-primary: #1b2133;
+  --text-secondary: #3d4560;
+  --text-tertiary: #59627c;
+  --hover-bg: rgba(255, 255, 255, 0.7);
+  --progress-bg: rgba(27, 33, 51, 0.08);
+  --progress-cpu: #5b5bf0;
+  --progress-memory: #a35bf0;
+  --progress-disk: #f07a5b;
+  --progress-network: #1fae8a;
+  --progress-load: #e05bb0;
+  --accent-500: #5b5bf0;
+  --accent-strong: #4646d8;
+  --ring: rgba(91, 91, 240, 0.32);
+  --traffic-up: #5b5bf0;
+  --traffic-down: #1fae8a;
+  --skin-card-shadow: 0 10px 30px rgba(40, 48, 90, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+:root[data-skin="frost"][data-appearance="dark"] {
+  --bg-0: #0b0f1d;
+  --canvas-glow:
+    radial-gradient(70% 60% at 10% 10%, rgba(99, 102, 241, 0.4) 0%, rgba(99, 102, 241, 0) 70%),
+    radial-gradient(70% 60% at 95% 80%, rgba(20, 184, 166, 0.3) 0%, rgba(20, 184, 166, 0) 70%);
+  --surface: rgba(255, 255, 255, 0.07);
+  --surface-elev: #1a1f30;
+  --surface-sunken: rgba(0, 0, 0, 0.2);
+  --border: rgba(255, 255, 255, 0.12);
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.2);
+  --hairline: rgba(255, 255, 255, 0.1);
+  --text-primary: #eceffa;
+  --text-secondary: #c3c8da;
+  --text-tertiary: #9198b0;
+  --fill-secondary: rgba(255, 255, 255, 0.12);
+  --fill-tertiary: rgba(255, 255, 255, 0.06);
+  --hover-bg: rgba(255, 255, 255, 0.1);
+  --progress-bg: rgba(255, 255, 255, 0.1);
+  --progress-cpu: #8f95ff;
+  --progress-memory: #c08bff;
+  --progress-disk: #ff9a7a;
+  --progress-network: #4fd1a5;
+  --progress-load: #f58bd0;
+  --accent-500: #8f95ff;
+  --accent-strong: #7077f0;
+  --ring: rgba(143, 149, 255, 0.45);
+  --traffic-up: #8f95ff;
+  --traffic-down: #4fd1a5;
+  --skin-card-shadow: 0 10px 30px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* 光斑铺满整页（原版的顶光只画第一屏）。 */
+:root[data-skin="frost"] {
+  background-size: 100% 100%;
+  background-attachment: scroll;
+}
+
+:root[data-skin="frost"] :is(.server-card, .compact-node-card, .mini-node-card, .node-list-scroll) {
+  box-shadow: var(--skin-card-shadow);
+}
+
+/* 毛玻璃只给总览、站长条和筛选栏：数量少，手机上也不卡；几十张机器卡片不加。 */
+:root[data-skin="frost"] :is(.overview-card, .home-overview-strip, .owner-strip, .home-group-tabs, .home-region-bar) {
+  background: var(--surface-a);
+  box-shadow: var(--skin-card-shadow);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+}
+
+/* ---------- 终端：等宽字，像在 SSH 里看监控 ---------- */
+
+:root[data-skin="terminal"] {
+  --radius-scale: 0.15;
+  --font-sans: var(--skin-mono);
+  --font-numeric: var(--skin-mono);
+  letter-spacing: 0;
+}
+
+:root[data-skin="terminal"]:not([data-appearance="dark"]) {
+  --bg-0: #fbf5e4;
+  --surface: #fffaee;
+  --surface-elev: #fffcf3;
+  --surface-sunken: #f3ead2;
+  --border: #e3d8bb;
+  --border-subtle: #ece3c8;
+  --border-strong: #d2c49f;
+  --hairline: #e3d8bb;
+  --text-primary: #0b3440;
+  --text-secondary: #2f5560;
+  --text-tertiary: #536b74;
+  --fill-secondary: rgba(11, 52, 64, 0.1);
+  --fill-tertiary: rgba(11, 52, 64, 0.05);
+  --hover-bg: #f6eed8;
+  --progress-bg: #ece3c8;
+  --progress-cpu: #1d7a5f;
+  --progress-memory: #0e7490;
+  --progress-disk: #9c5f09;
+  --progress-network: #2563eb;
+  --progress-load: #a3367a;
+  --accent-500: #1d7a5f;
+  --accent-strong: #145a46;
+  --ring: rgba(29, 122, 95, 0.32);
+  --traffic-up: #1d7a5f;
+  --traffic-down: #0e7490;
+  --tag-gray-bg: #efe6cc;
+  --tag-gray-fg: #2f5560;
+  --canvas-glow: none;
+}
+
+:root[data-skin="terminal"][data-appearance="dark"] {
+  --bg-0: #0a0d0b;
+  --surface: #0e1310;
+  --surface-elev: #121a15;
+  --surface-sunken: #070a08;
+  --border: #1e2b22;
+  --border-subtle: #18231c;
+  --border-strong: #2d4033;
+  --hairline: #1e2b22;
+  --text-primary: #d4e4d8;
+  --text-secondary: #a9bfb0;
+  --text-tertiary: #728a7a;
+  --fill-secondary: rgba(74, 222, 128, 0.1);
+  --fill-tertiary: rgba(74, 222, 128, 0.05);
+  --hover-bg: #131b16;
+  --progress-bg: #16201a;
+  --progress-cpu: #4ade80;
+  --progress-memory: #22d3ee;
+  --progress-disk: #fbbf24;
+  --progress-network: #60a5fa;
+  --progress-load: #f472b6;
+  --accent-500: #4ade80;
+  --accent-strong: #22c55e;
+  --text-on-strong: #04140a;
+  --ring: rgba(74, 222, 128, 0.4);
+  --traffic-up: #4ade80;
+  --traffic-down: #22d3ee;
+  --tag-gray-bg: rgba(74, 222, 128, 0.1);
+  --tag-gray-fg: #a9bfb0;
+}
+
+/* ---------- 极光：深色舞台，顶部一道极光 ---------- */
+
+:root[data-skin="aurora"] {
+  --radius-scale: 1.25;
+}
+
+:root[data-skin="aurora"]:not([data-appearance="dark"]) {
+  --bg-0: #f7f7fb;
+  --canvas-glow: radial-gradient(
+    130% 70% at 50% -20%,
+    rgba(45, 212, 191, 0.28) 0%,
+    rgba(139, 92, 246, 0.18) 45%,
+    rgba(139, 92, 246, 0) 75%
+  );
+  --surface: #ffffff;
+  --surface-elev: #ffffff;
+  --surface-sunken: #f1f1f7;
+  --border: rgba(16, 16, 40, 0.07);
+  --border-subtle: rgba(16, 16, 40, 0.05);
+  --border-strong: rgba(16, 16, 40, 0.14);
+  --hairline: rgba(16, 16, 40, 0.07);
+  --text-primary: #14142b;
+  --text-secondary: #3f3f5a;
+  --text-tertiary: #64647e;
+  --hover-bg: #f3f3f9;
+  --progress-bg: rgba(16, 16, 40, 0.07);
+  --progress-cpu: #0891b2;
+  --progress-memory: #7c3aed;
+  --progress-disk: #ea580c;
+  --progress-network: #059669;
+  --progress-load: #db2777;
+  --accent-500: #0e7490;
+  --accent-strong: #155e75;
+  --ring: rgba(14, 116, 144, 0.3);
+  --traffic-up: #0891b2;
+  --traffic-down: #059669;
+  --skin-card-shadow: 0 1px 2px rgba(16, 16, 40, 0.04), 0 8px 24px rgba(16, 16, 40, 0.05);
+}
+
+:root[data-skin="aurora"][data-appearance="dark"] {
+  --bg-0: #07070d;
+  --canvas-glow: radial-gradient(
+    130% 70% at 50% -20%,
+    rgba(45, 212, 191, 0.3) 0%,
+    rgba(139, 92, 246, 0.22) 45%,
+    rgba(139, 92, 246, 0) 75%
+  );
+  --surface: #11111b;
+  --surface-elev: #161624;
+  --surface-sunken: #0b0b13;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --hairline: rgba(255, 255, 255, 0.07);
+  --text-primary: #f3f3f8;
+  --text-secondary: #c4c4d4;
+  --text-tertiary: #86869c;
+  --fill-secondary: rgba(255, 255, 255, 0.1);
+  --fill-tertiary: rgba(255, 255, 255, 0.05);
+  --hover-bg: #171725;
+  --progress-bg: rgba(255, 255, 255, 0.08);
+  --progress-cpu: #22d3ee;
+  --progress-memory: #a78bfa;
+  --progress-disk: #fb923c;
+  --progress-network: #34d399;
+  --progress-load: #f472b6;
+  --accent-500: #7dd3fc;
+  --accent-strong: #38bdf8;
+  --text-on-strong: #07070d;
+  --ring: rgba(125, 211, 252, 0.4);
+  --traffic-up: #22d3ee;
+  --traffic-down: #34d399;
+  --skin-card-shadow: 0 0 0 1px rgba(255, 255, 255, 0.02), 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-skin="aurora"] :is(.server-card, .compact-node-card, .mini-node-card, .node-list-scroll, .overview-card) {
+  box-shadow: var(--skin-card-shadow);
+}
+
+/* 大数字收紧一点字距，更醒目。 */
+:root[data-skin="aurora"] :is(.overview-card-value, .server-card-meta-value, .compact-node-info-row-value) {
+  letter-spacing: -0.02em;
+}
+
+/* ---------- 自定义：主色、圆角、疏密、数字字体（写在风格后面，压过风格自带的值） ---------- */
+
+/* 主色：只改界面强调色（选中态、按钮、复选框），不改数据配色。深色下调亮一点保证对比度。 */
+:root[data-accent]:not([data-appearance="dark"]) {
+  --accent-500: var(--accent-custom);
+  --accent-strong: color-mix(in srgb, var(--accent-custom) 82%, #000000);
+  --ring: color-mix(in srgb, var(--accent-custom) 32%, transparent);
+}
+
+:root[data-accent][data-appearance="dark"] {
+  --accent-500: color-mix(in srgb, var(--accent-custom) 72%, #ffffff);
+  --accent-strong: color-mix(in srgb, var(--accent-custom) 88%, #ffffff);
+  --ring: color-mix(in srgb, var(--accent-custom) 45%, transparent);
+}
+
+:root[data-radius="none"] {
+  --radius-scale: 0;
+}
+
+:root[data-radius="sm"] {
+  --radius-scale: 0.55;
+}
+
+:root[data-radius="md"] {
+  --radius-scale: 1;
+}
+
+:root[data-radius="lg"] {
+  --radius-scale: 1.45;
+}
+
+:root[data-num-font="mono"] {
+  --font-numeric: var(--skin-mono);
+}
+
+/* 疏密：只动卡片内边距、卡片间距；「标准」不写属性，和原版一样。 */
+:root[data-density="tight"] .node-grid {
+  gap: 8px;
+}
+
+:root[data-density="tight"] :is(.compact-node-card, .mini-node-card) {
+  padding: 10px;
+  gap: 7px;
+}
+
+:root[data-density="tight"] .server-card-content {
+  padding: 13px 13px 11px;
+  gap: 10px;
+}
+
+:root[data-density="tight"] .node-list-row {
+  min-height: 46px;
+  padding-block: 6px;
+}
+
+:root[data-density="loose"] .node-grid {
+  gap: 24px;
+}
+
+:root[data-density="loose"] :is(.compact-node-card, .mini-node-card) {
+  padding: 18px;
+  gap: 13px;
+}
+
+:root[data-density="loose"] .server-card-content {
+  padding: 22px 22px 19px;
+  gap: 18px;
+}
+
+:root[data-density="loose"] .node-list-row {
+  min-height: 64px;
+  padding-block: 14px;
+}
+
+/* ---------- 设置页的风格选择 ---------- */
+
+.skin-tiles {
+  display: grid;
+  /* 手机上一行三个（和设计稿一致），宽屏一行六个。 */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 92px), 1fr));
+  gap: 10px;
+}
+
+.skin-tile {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  border: 2px solid var(--hairline);
+  border-radius: calc(14px * var(--radius-scale, 1));
+  background: var(--surface-a);
+  text-align: left;
+  cursor: pointer;
+}
+
+.skin-tile[aria-pressed="true"] {
+  border-color: var(--accent-500);
+}
+
+.skin-tile.is-empty {
+  min-height: 98px;
+  align-items: center;
+  justify-content: center;
+  border-style: dashed;
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.skin-tile-preview {
+  position: relative;
+  display: block;
+  height: 64px;
+  overflow: hidden;
+  border-radius: 9px;
+}
+
+.skin-tile-card {
+  position: absolute;
+  inset: 10px 8px;
+  border: 1px solid transparent;
+}
+
+.skin-tile-line,
+.skin-tile-bar {
+  position: absolute;
+  left: 15px;
+}
+
+.skin-tile-line {
+  top: 18px;
+  width: 34px;
+  height: 5px;
+  border-radius: 999px;
+}
+
+.skin-tile-bar {
+  top: 30px;
+  width: 46px;
+  height: 4px;
+}
+
+.skin-tile-bar.is-short {
+  top: 40px;
+  width: 30px;
+}
+
+.skin-tile-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 0 2px;
+}
+
+.skin-tile-name {
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.skin-tile-tag {
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.skin-accents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.skin-accent {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.skin-accent > span {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--swatch);
+}
+
+.skin-accent[aria-pressed="true"] {
+  border-color: var(--swatch, var(--accent-500));
+}
+
+.skin-accent.is-auto {
+  width: auto;
+  min-width: 36px;
+  padding: 0 10px;
+  border-color: var(--hairline);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.skin-accent.is-auto > span {
+  width: auto;
+  height: auto;
+  background: none;
+}
+
+.skin-accent.is-auto[aria-pressed="true"] {
+  border-color: var(--accent-500);
+  color: var(--text-primary);
+}

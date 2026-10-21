@@ -50,7 +50,7 @@
   height: 24px;
   place-items: center;
   border: 0;
-  border-radius: 7px;
+  border-radius: calc(7px * var(--radius-scale, 1));
   background: transparent;
   color: var(--text-tertiary);
   transition:
@@ -83,7 +83,7 @@
   padding: 0 0.5rem;
   border: 1px solid rgba(47, 158, 101, 0.22);
   border: 1px solid color-mix(in srgb, var(--status-success) 18%, transparent);
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   background: rgba(47, 158, 101, 0.1);
   background: color-mix(in srgb, var(--status-success) 10%, var(--surface-elev));
   color: var(--status-success);
@@ -100,7 +100,7 @@
 /* V4 / V6 徽章在迷你卡里跟这一行的价格、标签同高同圆角（默认 22px，高出 2 像素）。 */
 .mini-node-chip-row .ip-stack-badge {
   height: 20px;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
 }
 
 .mini-node-tag-lane {
@@ -125,7 +125,7 @@
   overflow: hidden;
   padding: 0 0.5rem;
   border: 1px solid color-mix(in srgb, var(--tag-fg) 14%, transparent);
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   background: var(--tag-bg);
   color: var(--tag-fg);
   font-size: 10px;

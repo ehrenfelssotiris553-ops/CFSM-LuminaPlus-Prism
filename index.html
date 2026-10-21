@@ -66,6 +66,27 @@
           }
         } catch {}
 
+        // 配色风格的首帧缓存（Lumina Prism，见 src/utils/skin.ts），免得先闪一下原版配色。
+        try {
+          const rawSkin = localStorage.getItem("cfsm-lumina-prism:skin");
+          const skin = rawSkin ? JSON.parse(rawSkin) : null;
+          if (skin && typeof skin === "object") {
+            const root = document.documentElement;
+            const pick = (value, list) => (list.includes(value) ? value : null);
+            const attrs = {
+              "data-skin": pick(skin.skin, ["paper", "frost", "terminal", "aurora"]),
+              "data-radius": pick(skin.radius, ["none", "sm", "md", "lg"]),
+              "data-density": pick(skin.density, ["loose", "tight"]),
+              "data-num-font": pick(skin.numericFont, ["mono"]),
+            };
+            for (const name in attrs) if (attrs[name]) root.setAttribute(name, attrs[name]);
+            if (typeof skin.accent === "string" && /^#[0-9a-f]{6}$/i.test(skin.accent)) {
+              root.setAttribute("data-accent", "");
+              root.style.setProperty("--accent-custom", skin.accent);
+            }
+          }
+        } catch {}
+
         // 卡片不透明度的首帧缓存；背景图本身由后台注入的 <style> 负责。
         try {
           const rawSurface = localStorage.getItem("cfsm-luminaplus:surface");

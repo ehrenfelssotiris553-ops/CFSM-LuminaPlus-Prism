@@ -6,7 +6,7 @@
   flex: 0 0 auto;
   place-items: center;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: calc(10px * var(--radius-scale, 1));
   color: var(--text-secondary);
   transition:
     background 160ms ease,
@@ -44,7 +44,7 @@
   gap: 18px 40px;
   overflow: hidden;
   border: 1px solid var(--hairline);
-  border-radius: 18px;
+  border-radius: calc(18px * var(--radius-scale, 1));
   background:
     linear-gradient(
       130deg,
@@ -190,7 +190,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   background: color-mix(in srgb, var(--status-warning) 10%, transparent);
   color: color-mix(in srgb, var(--status-warning) 84%, var(--text-primary));
   padding: 3px 6px;
@@ -221,7 +221,7 @@
   gap: 4px;
   overflow-x: auto;
   border: 1px solid color-mix(in srgb, var(--border-strong) 42%, transparent);
-  border-radius: 12px;
+  border-radius: calc(12px * var(--radius-scale, 1));
   background: var(--surface);
   padding: 4px;
 }
@@ -232,7 +232,7 @@
   min-height: 26px;
   overflow: hidden;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   color: var(--text-secondary);
   padding: 0 9px;
   font-size: 11px;
@@ -275,7 +275,7 @@
   flex-direction: column;
   gap: 7px;
   border: 1px solid color-mix(in srgb, var(--hairline) 84%, transparent);
-  border-radius: 14px;
+  border-radius: calc(14px * var(--radius-scale, 1));
   background: var(--surface-elev);
   color: var(--text-primary);
   padding: 10px 12px;
@@ -348,7 +348,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   background: color-mix(in srgb, var(--assets-renewal-color) 11%, transparent);
   color: var(--assets-renewal-color);
   padding: 3px 6px;
@@ -363,7 +363,7 @@
 .cost-summary-price-chip {
   display: inline-flex;
   flex: 0 0 auto;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   background: color-mix(in srgb, #3b82f6 13%, transparent);
   color: #2563eb;
   padding: 2px 6px;
@@ -377,7 +377,7 @@
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   background: color-mix(in srgb, var(--cost-premium-color, var(--text-tertiary)) 13%, transparent);
   color: var(--cost-premium-color, var(--text-tertiary));
   padding: 2px 6px;
@@ -412,7 +412,7 @@
 
 .cost-summary-rate-details {
   border: 1px solid color-mix(in srgb, var(--hairline) 82%, transparent);
-  border-radius: 12px;
+  border-radius: calc(12px * var(--radius-scale, 1));
   background: var(--surface-elev);
 }
 
@@ -542,7 +542,7 @@
 .assets-table-wrap {
   overflow-x: auto;
   border: 1px solid var(--hairline);
-  border-radius: 16px;
+  border-radius: calc(16px * var(--radius-scale, 1));
   background: var(--surface-a);
 }
 
@@ -641,7 +641,7 @@
   align-items: center;
   justify-content: flex-end;
   gap: 7px;
-  border-radius: 7px;
+  border-radius: calc(7px * var(--radius-scale, 1));
   background: color-mix(in srgb, var(--assets-renewal-color) 11%, transparent);
   color: var(--assets-renewal-color);
   padding: 4px 7px;
@@ -664,7 +664,7 @@
 
 .assets-note-chip {
   display: inline-flex;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   background: var(--fill-tertiary);
   color: var(--text-tertiary);
   padding: 2px 7px;

@@ -48,7 +48,7 @@
   z-index: 10;
   padding: 2px 8px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   background: var(--surface);
   color: var(--text-secondary);
   font-size: 11.5px;

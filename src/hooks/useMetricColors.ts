@@ -230,6 +230,12 @@ function applyDarkDepth(value: number) {
   }
 }
 
+/** 别处改了颜色变量（比如切换配色风格）：让画布图表重新取色、重画。 */
+export function refreshCanvasColors() {
+  clearCssColorCache();
+  bumpVersionThrottled();
+}
+
 function applyPalette(palette: PaletteDraft) {
   applyMetricColors(palette.colors);
   applyDarkDepth(palette.darkDepth);
