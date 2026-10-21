@@ -130,25 +130,45 @@
 }
 
 .lc-subtitle {
-  min-width: 0;
-  max-width: 40%;
+  min-width: 2.5em;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* 价格、到期比分组名更要紧：空间不够时先压分组名。 */
+.lc-foot > :not(.lc-subtitle) {
+  flex-shrink: 0;
 }
 
 .lc-foot-end {
   margin-left: auto;
 }
 
-.lc-ping {
+/* 延迟一串：放不下就换行，每条线路「名字 数字」不拆开。 */
+.lc-pings {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+}
+
+.lc-ping-item {
   display: inline-flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 4px;
   white-space: nowrap;
 }
 
-.lc-ping b {
+.lc-ping-item b {
+  font-size: 12.5px;
   font-weight: 700;
+}
+
+.lc-pings > small {
+  margin-left: -4px;
 }
 
 /* ---------- 条、圆环、流量 ---------- */
@@ -210,11 +230,12 @@
 }
 
 /* 圆环：底色圆和进度都画在 ::before 上，中间用 mask 挖空 —— 卡片半透明（雾玻璃）时也不会透出底下的颜色。 */
+/* 尺寸最大是 --lc-ring-size，格子窄了（英文、窄卡片）就等比缩小，不把旁边的网速挤出去。 */
 .lc-ring {
   position: relative;
   display: grid;
-  width: 58px;
-  height: 58px;
+  width: min(var(--lc-ring-size, 58px), 100%);
+  aspect-ratio: 1 / 1;
   place-items: center;
 }
 
@@ -243,7 +264,7 @@
 
 .lc-ring-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.2fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.5fr);
   align-items: center;
   gap: 6px;
 }
@@ -262,7 +283,7 @@
 
 .lc-ring-net strong {
   color: var(--text-primary);
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: -0.02em;
 }

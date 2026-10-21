@@ -811,9 +811,11 @@ export const zh = {
   "health.grade.bad": "告警",
   "skin.name.cockpit": "座舱",
   "skin.tag.cockpit": "仪表",
-  "ping.settingHidden": "设置里隐藏了 {n} 条 · 显示",
-  "ping.settingHiddenShown": "收起设置里隐藏的 {n} 条",
-  "ping.settingHiddenTitle": "设置 → 延迟线路 里对这台隐藏的线路默认不画；点一下临时显示，不改设置。",
+  "ping.settingHidden": "另有 {n} 条首页没显示 · 显示",
+  "ping.settingHiddenShown": "收起首页没显示的 {n} 条",
+  "ping.settingHiddenTitle": "首页没选进来、或在设置里对这台隐藏的线路，详情页默认不画；点一下临时显示，不改设置。",
+  "settings.phoneOverviewStrip": "手机总览压成一行",
+  "settings.phoneOverviewStripDesc": "手机上把在线、实时、累计、资产压成一行，不用左右滑；关掉恢复原版的四张卡片。电脑上不受影响。",
   // @@entries
 } as const;
 

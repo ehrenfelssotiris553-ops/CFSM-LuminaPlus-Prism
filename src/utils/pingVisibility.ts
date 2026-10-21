@@ -126,7 +126,28 @@ export function isHomepagePingVisible(uuid: string, taskId: number, settings: Pi
   return explainHomepagePingVisibility(uuid, taskId, settings).visible;
 }
 
-/** 按设置过滤一台机器要显示的线路，详情页的延迟图也用它：设置里隐藏的线路首页和详情页都不画。 */
+/**
+ * 详情页延迟图画哪几条：和这台机器在首页显示的一致。
+ * - 首页开着多线路时（`homepageLineIds` 不为 null），只画这台在首页的那几条（站点选的线路 + 这台单独换过的），顺序也一样；
+ *   没选进首页的线路（比如后端配了 8 条、首页只选了 7 条的第 8 条）不画。
+ * - 再去掉设置里对这台隐藏的（V4 / V6 默认、本台协议组、单条设置）。
+ * 首页是单线路模式时只做第二步：详情页只剩一条太少。
+ */
+export function selectDetailPingTasks<T extends { id: number }>(
+  tasks: readonly T[],
+  uuid: string,
+  settings: PingDisplaySettings,
+  homepageLineIds: readonly number[] | null,
+): T[] {
+  const visible = filterVisiblePingTasks(tasks, uuid, settings);
+  if (!homepageLineIds) return visible;
+  const order = new Map(homepageLineIds.map((taskId, index) => [taskId, index] as const));
+  return visible
+    .filter((task) => order.has(task.id))
+    .sort((left, right) => order.get(left.id)! - order.get(right.id)!);
+}
+
+/** 按设置过滤一台机器要显示的线路：设置里隐藏的线路首页和详情页都不画。 */
 export function filterVisiblePingTasks<T extends { id: number }>(
   tasks: readonly T[],
   uuid: string,

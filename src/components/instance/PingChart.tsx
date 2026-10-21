@@ -7,7 +7,9 @@ import { usePingRecords } from "@/hooks/useRecords";
 import { useCarrierNames } from "@/hooks/usePublicConfig";
 import { carrierTaskName } from "@/services/cfsm/mappers";
 import { useThemeSettings } from "@/hooks/useThemeSettings";
-import { filterVisiblePingTasks } from "@/utils/pingVisibility";
+import { selectDetailPingTasks } from "@/utils/pingVisibility";
+import { isHomepageMultiPingConfigured } from "@/utils/pingTasks";
+import { useNodeMultiPingTaskIds } from "@/hooks/usePingOverview";
 import { InstancePanel, InstanceChartLoading } from "./InstancePanel";
 import {
   buildChartTooltipHooks,
@@ -173,18 +175,29 @@ export function PingChart({
     homepagePingGroupOverrides,
     homepagePingProtocols,
     homepagePingVisibilityOverrides,
+    enableHomepageMultiPing,
+    homepageMultiPingTaskIds,
   } = useThemeSettings();
+  // 首页开着多线路时，这台在首页显示的那几条（含单独换过的）；单线路模式为 null。
+  const nodeLineIds = useNodeMultiPingTaskIds(uuid);
+  const homepageLineIds =
+    enableHomepageMultiPing && isHomepageMultiPingConfigured(homepageMultiPingTaskIds) ? nodeLineIds : null;
   const [showSettingHidden, setShowSettingHidden] = useState(false);
   const settingVisibleTasks = useMemo(
     () =>
-      filterVisiblePingTasks(allTasks, uuid, {
-        showPingIpv4,
-        showPingIpv6,
-        homepagePingGroupOverrides,
-        homepagePingProtocols,
-        homepagePingVisibilityOverrides,
-      }),
-    [allTasks, homepagePingGroupOverrides, homepagePingProtocols, homepagePingVisibilityOverrides, showPingIpv4, showPingIpv6, uuid],
+      selectDetailPingTasks(
+        allTasks,
+        uuid,
+        {
+          showPingIpv4,
+          showPingIpv6,
+          homepagePingGroupOverrides,
+          homepagePingProtocols,
+          homepagePingVisibilityOverrides,
+        },
+        homepageLineIds,
+      ),
+    [allTasks, homepageLineIds, homepagePingGroupOverrides, homepagePingProtocols, homepagePingVisibilityOverrides, showPingIpv4, showPingIpv6, uuid],
   );
   const settingHiddenCount = allTasks.length - settingVisibleTasks.length;
   const tasks = showSettingHidden ? allTasks : settingVisibleTasks;

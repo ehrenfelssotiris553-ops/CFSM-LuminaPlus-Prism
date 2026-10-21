@@ -335,6 +335,7 @@ function pickManagedThemeSettings(settings: ResolvedThemeSettings) {
     enableHomepageMultiPing: settings.enableHomepageMultiPing,
     homepageMultiPingTaskIds: settings.homepageMultiPingTaskIds,
     showHomeOverview: settings.showHomeOverview,
+    phoneOverviewStrip: settings.phoneOverviewStrip,
     showAssetOverview: settings.showAssetOverview,
     showGroupTabs: settings.showGroupTabs,
     showRegionBar: settings.showRegionBar,
@@ -2015,6 +2016,13 @@ export function ThemeManage() {
                     title={t("settings.showOverview")}
                     desc={t("settings.showOverviewDesc")}
                     checked={draft.showHomeOverview}
+                    onPatch={patch}
+                  />
+                  <ToggleRow
+                    field="phoneOverviewStrip"
+                    title={t("settings.phoneOverviewStrip")}
+                    desc={t("settings.phoneOverviewStripDesc")}
+                    checked={draft.phoneOverviewStrip}
                     onPatch={patch}
                   />
                   <ToggleRow

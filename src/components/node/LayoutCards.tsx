@@ -18,6 +18,7 @@ import { IpStackBadges } from "./IpStackBadges";
 import { LatencyBars } from "./LatencyBars";
 import { MultiPingStatus } from "./MultiPingStatus";
 import { NodeClockWarning } from "./NodeClockWarning";
+import { shortLineName } from "@/services/cfsm/mappers";
 import { formatCompactPercent, nodeDetailLinkLabels, pingEmptyLabels } from "./nodeCardShared";
 
 /*
@@ -52,10 +53,6 @@ const TONE_COLOR: Record<HealthTone, string> = {
   bad: "var(--status-error)",
 };
 
-/** 「CT 电信」只留「电信」，三条线挤在一行时省地方。 */
-function shortLineName(name: string) {
-  return name.trim().split(/\s+/).pop() ?? name;
-}
 
 function sumTrend(trend: { up: TrafficTrendSample[]; down: TrafficTrendSample[] }, count: number) {
   const up = trend.up.slice(-count);
@@ -121,31 +118,34 @@ function CardFoot({ model, children }: { model: ReadyModel; children?: ReactNode
   );
 }
 
-/** 延迟摘要：多线路是「电信 28 · 联通 36 · 移动 85 ms」，单线路一个数。没配延迟就不显示。 */
-function PingSummary({ model }: { model: ReadyModel }) {
+/**
+ * 延迟摘要：多线路是一串「电信 28 · 联通 36 …」，单线路一个数。放不下自动换行（站长选了七八条线路时也能看全）。
+ * `bare`：外面已经有「延迟」标题了（便当盒的格子），这里就不再写。没配延迟就不显示。
+ */
+function PingSummary({ model, bare = false }: { model: ReadyModel; bare?: boolean }) {
   if (!model.showHomepagePing) return null;
   const lines = model.homepagePingLines;
-  if (lines.length > 0) {
-    return (
-      <span className="lc-ping tabular">
-        {lines.map((line, index) => (
-          <span key={line.slot ?? index}>
-            {shortLineName(line.taskName)}{" "}
+  return (
+    <div className="lc-pings tabular">
+      {bare ? null : <span className="lc-label">{t("card.latency")}</span>}
+      {lines.length > 0 ? (
+        lines.map((line, index) => (
+          <span key={line.slot ?? index} className="lc-ping-item">
+            <span>{shortLineName(line.taskName)}</span>
             <b style={{ color: latencyHeatColor(line.lastValue) }}>
               {line.lastValue == null ? "—" : Math.round(line.lastValue)}
             </b>
           </span>
-        ))}
-        <small>ms</small>
-      </span>
-    );
-  }
-  const value = model.ping.lastValue;
-  return (
-    <span className="lc-ping tabular">
-      <b style={{ color: model.latencyColor }}>{value == null ? "—" : Math.round(value)}</b>
+        ))
+      ) : (
+        <span className="lc-ping-item">
+          <b style={{ color: model.latencyColor }}>
+            {model.ping.lastValue == null ? "—" : Math.round(model.ping.lastValue)}
+          </b>
+        </span>
+      )}
       <small>ms</small>
-    </span>
+    </div>
   );
 }
 
@@ -153,8 +153,7 @@ function Ring({ value, label, color, text, size = 58 }: { value: number; label: 
   const style = {
     "--lc-ring": `${clampPct(value)}%`,
     "--lc-ring-color": color,
-    width: size,
-    height: size,
+    "--lc-ring-size": `${size}px`,
   } as CSSProperties;
   const display = text ?? formatCompactPercent(value);
   return (
@@ -270,9 +269,8 @@ export const RingNodeCard = memo(function RingNodeCard({ uuid }: { uuid: string 
         </div>
       )}
       <TrafficLine model={model} />
-      <CardFoot model={model}>
-        <PingSummary model={model} />
-      </CardFoot>
+      <PingSummary model={model} />
+      <CardFoot model={model} />
     </CardShell>
   );
 });
@@ -309,9 +307,8 @@ export const HeroNodeCard = memo(function HeroNodeCard({ uuid }: { uuid: string 
         </>
       )}
       <TrafficLine model={model} />
-      <CardFoot model={model}>
-        <PingSummary model={model} />
-      </CardFoot>
+      <PingSummary model={model} />
+      <CardFoot model={model} />
     </CardShell>
   );
 });
@@ -412,7 +409,7 @@ export const BentoNodeCard = memo(function BentoNodeCard({ uuid }: { uuid: strin
           </div>
           <div className="lc-tile lc-tile-wide">
             <span className="lc-label">{t("card.latency")}</span>
-            <PingSummary model={model} />
+            <PingSummary model={model} bare />
           </div>
           <div className="lc-tile">
             <span className="lc-label">{t("card.expire")}</span>
@@ -511,9 +508,8 @@ export const HealthNodeCard = memo(function HealthNodeCard({ uuid }: { uuid: str
           </span>
         </div>
       ) : null}
-      <CardFoot model={model}>
-        <PingSummary model={model} />
-      </CardFoot>
+      <PingSummary model={model} />
+      <CardFoot model={model} />
     </CardShell>
   );
 });
@@ -597,9 +593,8 @@ export const GaugeNodeCard = memo(function GaugeNodeCard({ uuid }: { uuid: strin
           </span>
         </div>
       ) : null}
-      <CardFoot model={model}>
-        <PingSummary model={model} />
-      </CardFoot>
+      <PingSummary model={model} />
+      <CardFoot model={model} />
     </CardShell>
   );
 });

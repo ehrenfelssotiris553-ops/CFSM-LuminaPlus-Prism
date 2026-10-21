@@ -526,6 +526,7 @@ export interface ThemeSettings {
   homepagePingLineOverrides?: Record<string, Record<string, number>>;
   fakePingForUnbound?: boolean;
   showHomeOverview?: boolean;
+  phoneOverviewStrip?: boolean;
   showGroupTabs?: boolean;
   showRegionBar?: boolean;
   showCardGroup?: boolean;

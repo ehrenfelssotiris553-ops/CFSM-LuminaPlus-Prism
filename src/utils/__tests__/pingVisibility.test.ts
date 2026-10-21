@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyPingVisibilityEdits, diffPingVisibility, filterVisiblePingTasks, isHomepagePingVisible, LOCAL_PING_VISIBILITY_EDITS_KEY, mergePingVisibilityEdits, normalizePingVisibility, normalizePingVisibilityEdits, migratePingDisplaySettings, migrateLocalPingPreferences, pingTaskProtocol, setPingVisibilityMode } from "@/utils/pingVisibility";
+import { applyPingVisibilityEdits, diffPingVisibility, filterVisiblePingTasks, isHomepagePingVisible, selectDetailPingTasks, LOCAL_PING_VISIBILITY_EDITS_KEY, mergePingVisibilityEdits, normalizePingVisibility, normalizePingVisibilityEdits, migratePingDisplaySettings, migrateLocalPingPreferences, pingTaskProtocol, setPingVisibilityMode } from "@/utils/pingVisibility";
 import { mergeLocalThemeSettingsEdits, mergeThemeSettingsLayers, normalizeThemeSettings } from "@/utils/themeSettings";
 
 describe("per-node homepage ping visibility", () => {
@@ -134,5 +134,18 @@ describe("detail page ping lines", () => {
     const tasks = [{ id: 1 }, { id: 2 }, { id: 4 }, { id: 5 }, { id: 7 }];
     expect(filterVisiblePingTasks(tasks, "v4only", settings).map((task) => task.id)).toEqual([1, 2, 7]);
     expect(filterVisiblePingTasks(tasks, "dual", settings).map((task) => task.id)).toEqual([1, 2, 4, 5, 7]);
+  });
+
+  it("only draws the lines this machine shows on the homepage, in the same order", () => {
+    // 后端 8 条，首页选了 7 条（没有 8）；这台把第 4 条隐藏了，另外三条也隐藏，只剩 4 条。
+    const settings = normalizeThemeSettings({
+      homepagePingVisibilityOverrides: { one: { 4: false, 5: false, 6: false } },
+    });
+    const tasks = [1, 2, 3, 4, 5, 6, 7, 8].map((id) => ({ id }));
+    const homepage = [3, 1, 2, 4, 5, 6, 7];
+    expect(selectDetailPingTasks(tasks, "one", settings, homepage).map((task) => task.id)).toEqual([3, 1, 2, 7]);
+    expect(selectDetailPingTasks(tasks, "other", settings, homepage).map((task) => task.id)).toEqual([3, 1, 2, 4, 5, 6, 7]);
+    // 单线路模式：只按隐藏规则过滤。
+    expect(selectDetailPingTasks(tasks, "one", settings, null).map((task) => task.id)).toEqual([1, 2, 3, 7, 8]);
   });
 });

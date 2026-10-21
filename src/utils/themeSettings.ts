@@ -153,6 +153,8 @@ export interface ResolvedThemeSettings {
   homepageMultiPingTaskIds: number[];
   homepagePingLineOverrides: PingLineOverridesByNode;
   showHomeOverview: boolean;
+  /** 手机上（680px 以下）把四张总览卡压成一行；关掉是原版的四张卡片（两行两列）。 */
+  phoneOverviewStrip: boolean;
   /** 顶部总览里的「资产概览」卡（把每月花多少钱亮给所有访客，单独给个开关）。 */
   showAssetOverview: boolean;
   showGroupTabs: boolean;
@@ -235,6 +237,7 @@ export const DEFAULT_THEME_SETTINGS: ResolvedThemeSettings = {
   homepageMultiPingTaskIds: [...DEFAULT_HOMEPAGE_MULTI_PING_TASK_IDS],
   homepagePingLineOverrides: EMPTY_PING_LINE_OVERRIDES_BY_NODE,
   showHomeOverview: true,
+  phoneOverviewStrip: true,
   showAssetOverview: true,
   showGroupTabs: true,
   showRegionBar: true,
@@ -420,6 +423,7 @@ export function normalizeThemeSettings(
     // 是正整数（util 层不认线路表）；本机那份在 pingLineOverrideStore 里另按线路表筛。
     homepagePingLineOverrides: normalizePingLineOverridesByNode(settings?.homepagePingLineOverrides),
     showHomeOverview: enabledUnlessFalse(settings?.showHomeOverview),
+    phoneOverviewStrip: enabledUnlessFalse(settings?.phoneOverviewStrip),
     showAssetOverview: enabledUnlessFalse(settings?.showAssetOverview),
     showGroupTabs: enabledUnlessFalse(settings?.showGroupTabs),
     showRegionBar: enabledUnlessFalse(settings?.showRegionBar),

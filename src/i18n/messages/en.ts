@@ -809,8 +809,10 @@ export const en: Messages = {
   "health.grade.bad": "Alert",
   "skin.name.cockpit": "Cockpit",
   "skin.tag.cockpit": "Gauges",
-  "ping.settingHidden": "{n} hidden in settings · show",
-  "ping.settingHiddenShown": "Hide the {n} set as hidden",
-  "ping.settingHiddenTitle": "Lines hidden for this server in settings are left out by default. Click to show them for now without changing settings.",
+  "ping.settingHidden": "{n} more not shown on the homepage · show",
+  "ping.settingHiddenShown": "Hide the {n} not shown on the homepage",
+  "ping.settingHiddenTitle": "Lines not picked for the homepage, or hidden for this server in settings, are left out by default. Click to show them for now without changing settings.",
+  "settings.phoneOverviewStrip": "One-row overview on phones",
+  "settings.phoneOverviewStripDesc": "On phones, fit online, live, total and assets into one row with no swiping. Turn off to get the original four cards back. Desktop is unaffected.",
   // @@entries
 };

@@ -699,3 +699,13 @@ export function inferIntervalSeconds(times: number[]): number | undefined {
   const median = deltas[Math.floor(deltas.length / 2)]!;
   return Math.max(1, Math.round(median / 1000));
 }
+
+/**
+ * 「CT 电信」只留「电信」，线路多时省地方。只去掉开头的运营商代码（CT / CU / CM），
+ * 「Node 3」「Hong Kong」这种名字原样保留 —— 原来按空格只取最后一段，「Node 3」成了「3」。
+ */
+export function shortLineName(name: string) {
+  const trimmed = name.trim();
+  const match = /^(?:CT|CU|CM)\s+(\S.*)$/i.exec(trimmed);
+  return match ? match[1]! : trimmed;
+}

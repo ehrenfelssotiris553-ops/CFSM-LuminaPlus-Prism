@@ -936,7 +936,8 @@ export function NodeGrid() {
         <HomeOverviewCards
           overview={displayOverview}
           dense={mode === "mini" || mode === "list"}
-          compact={isPhone}
+          // 设置里关了「手机总览压成一行」就用原版的四张卡片。
+          compact={isPhone && themeSettings.phoneOverviewStrip}
           showDetailButton={showCostDetailButton}
           showAssetCard={showAssetCard}
           renewalReminderDays={

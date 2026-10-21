@@ -809,8 +809,10 @@ export const es: Messages = {
   "health.grade.bad": "Alerta",
   "skin.name.cockpit": "Cabina",
   "skin.tag.cockpit": "Indicadores",
-  "ping.settingHidden": "{n} ocultas en ajustes · mostrar",
-  "ping.settingHiddenShown": "Ocultar las {n} marcadas como ocultas",
-  "ping.settingHiddenTitle": "Las líneas ocultas para este servidor en los ajustes no se dibujan. Pulsa para verlas ahora sin cambiar los ajustes.",
+  "ping.settingHidden": "{n} más no se muestran en la portada · mostrar",
+  "ping.settingHiddenShown": "Ocultar las {n} que no están en la portada",
+  "ping.settingHiddenTitle": "Las líneas que no se eligieron para la portada, o que están ocultas para este servidor, no se dibujan. Pulsa para verlas ahora sin cambiar los ajustes.",
+  "settings.phoneOverviewStrip": "Resumen en una fila en el móvil",
+  "settings.phoneOverviewStripDesc": "En el móvil, junta en línea, en vivo, total y activos en una fila sin deslizar. Desactívalo para volver a las cuatro tarjetas originales. No afecta al escritorio.",
   // @@entries
 };

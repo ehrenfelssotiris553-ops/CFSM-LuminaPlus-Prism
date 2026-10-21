@@ -84,3 +84,14 @@ describe("new layouts", () => {
     for (const [, skin] of LAYOUT_PAIRS) expect(SKIN_IDS).toContain(skin);
   });
 });
+
+describe("short line names", () => {
+  it("drops only a leading carrier code", async () => {
+    const { shortLineName } = await import("@/services/cfsm/mappers");
+    expect(shortLineName("CT 电信")).toBe("电信");
+    expect(shortLineName("cu 联通")).toBe("联通");
+    expect(shortLineName("移动")).toBe("移动");
+    expect(shortLineName("Node 3")).toBe("Node 3");
+    expect(shortLineName("Hong Kong BGP")).toBe("Hong Kong BGP");
+  });
+});
