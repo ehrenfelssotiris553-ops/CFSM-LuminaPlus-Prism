@@ -1,14 +1,17 @@
-# CFSM-LuminaPlus-IPStack
+# Lumina Prism
 
-> **LuminaPlus 的 IPv4 / IPv6 独立显示定制版**，基于原版 [CFSM-Theme-LuminaPlus](https://github.com/volcano-1025/CFSM-Theme-LuminaPlus) v1.2.21。
-> 当前版本和每版改动见 [CHANGELOG.md](CHANGELOG.md)。
+> **CF-Server-Monitor 主题，LuminaPlus 的新界面版。** 在 [CFSM-LuminaPlus-IPStack](https://github.com/ehrenfelssotiris553-ops/CFSM-LuminaPlus-IPStack)（IPv4 / IPv6 独立显示定制版）
+> 的基础上继续开发，后者又基于原版 [CFSM-Theme-LuminaPlus](https://github.com/volcano-1025/CFSM-Theme-LuminaPlus) v1.2.21。
+> 三个仓库共用同一条提交历史，原版和 IPStack 版的修复都能直接合并过来。
 >
-> 新增「主题设置 → 卡片 → 首页 V4 / V6 标签」：两个全局开关，以及每台 VPS 各自的 IPv4 / IPv6 自动、显示、隐藏选项。
-> 大卡片、小卡片、迷你、列表均支持；保留旧配置的默认行为。
-> 另有只给登录站长看的首页 CF 用量卡片和 Agent 更新提醒（「主题设置 → 首页 → 站长专属信息」）。
+> | 仓库 | 定位 |
+> | --- | --- |
+> | [CFSM-Theme-LuminaPlus](https://github.com/volcano-1025/CFSM-Theme-LuminaPlus) | 原版 |
+> | [CFSM-LuminaPlus-IPStack](https://github.com/ehrenfelssotiris553-ops/CFSM-LuminaPlus-IPStack) | 稳定版：界面保持原样，只修问题 |
+> | **CFSM-LuminaPlus-Prism**（本仓库） | 新界面版：多套配色风格、新卡片布局、截图打码、更紧凑的手机首页 |
 >
-> 定制功能见 [使用说明](docs/IP-STACK.md)，审查范围、证据和限制见 [安全审查](docs/SECURITY-REVIEW-2026-10-20.md)。
-> 下文除安装地址外沿用原版说明；主题商店里的 **LuminaPlus** 是原版，不含本定制功能。
+> 当前版本和每版改动见 [CHANGELOG.md](CHANGELOG.md)，IPStack 版带来的功能见 [使用说明](docs/IP-STACK.md)。
+> 下文除安装地址外沿用原版说明；主题商店里的 **LuminaPlus** 是原版，不含这些功能。
 
 [CF-Server-Monitor](https://github.com/huilang-me/CF-Server-Monitor) 的第三方主题，
 由 [Komari-Theme-LuminaPlus](https://github.com/shanyang242/Komari-Theme-LuminaPlus) 移植而来。
@@ -21,7 +24,7 @@
 主题跟着你现有的 Workers 后端跑，不用自己构建或另找地方部署：把下面的地址填进后台的自定义主题 URL。
 
 ```
-https://github.com/ehrenfelssotiris553-ops/CFSM-LuminaPlus-IPStack/tree/dist
+https://github.com/ehrenfelssotiris553-ops/CFSM-LuminaPlus-Prism/tree/dist
 ```
 
 `dist` 是构建产物分支（源码在 `main`，别填错）。想锁定某一版，把 `dist` 换成那一版产物提交的 40 位 SHA；
@@ -34,7 +37,7 @@ https://github.com/ehrenfelssotiris553-ops/CFSM-LuminaPlus-IPStack/tree/dist
 - **填 `tree/dist` 的**：Workers 对分支地址缓存约一小时，过了缓存自动是新版；等不及就临时换成新版的 SHA。
 - **锁在 SHA 上的**：要手动换成新 SHA，否则一直停在旧版。
 
-登录后台后，有新版本时页脚的「LuminaPlus」后面会出现「新版 vX」；鼠标放到页脚的两个名字上能看到当前版本号。
+登录后台后，有新版本时页脚的「Lumina Prism」后面会出现「新版 vX」；鼠标放到页脚的两个名字上能看到当前版本号。
 线上跑的是哪一版，也可以看页面源码里的 `<meta name="theme-version">`。版本记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ### 界面语言
@@ -142,24 +145,23 @@ BACKGROUND_IMAGE=https://example.com/bg.webp
 - 产物分支只追加提交、不强推，锁在旧 SHA 的用户和主题商店里登记的历史版本一直可用。
 - 产物 `index.html` 里写有 `<meta name="theme-version">`，排查缓存时看它。
 
-## 同步原版
+## 同步原版和 IPStack 版
 
-本仓库的 `main` 接在原版 [volcano-1025/CFSM-Theme-LuminaPlus](https://github.com/volcano-1025/CFSM-Theme-LuminaPlus)
-的提交历史之后，原版更新时用 git 合并，git 会自动合并两边改了不同地方的部分：
+本仓库的 `main` 接在 IPStack 版之后，IPStack 版又接在原版之后。原版的更新一般先合进 IPStack 版，
+再从 IPStack 版合进来；IPStack 版修的 bug 也这样过来，修一处两边都有：
 
 ```bash
+git remote add ipstack https://github.com/ehrenfelssotiris553-ops/CFSM-LuminaPlus-IPStack.git                              # 只需一次
 git remote add upstream https://github.com/volcano-1025/CFSM-Theme-LuminaPlus.git   # 只需一次
-git fetch upstream
-git switch -c sync/upstream main
-git merge upstream/main
+git fetch ipstack
+git switch -c sync/ipstack main
+git merge ipstack/main
 ```
 
-- 冲突最常出在 `CHANGELOG.md`、`README.md`（两边都留）、`src/pages/ThemeManage.tsx`（设置页）、
-  三个语言文件（两边新增的条目都留）和 `package.json`（用原版的版本号加 `+ipstack.1`，再 `npm install` 重新生成 lock）。
+- 冲突最常出在 `CHANGELOG.md`、`README.md`（两边都留）、`package.json`（保留本仓库的版本号，再 `npm install` 重新生成 lock）、
+  设置页和三个语言文件（两边新增的条目都留）。
 - 合完跑 `npm test`、`npm run typecheck`、`npm run lint`、`npm run build`，再用 `?mock=1` 看一遍页面。
-  测试覆盖了 V4 / V6 标签、延迟线路显示、协议筛选与统计、离线提醒和各项请求规则。
-- 先推到 `preview` 分支，在后台用 `.../tree/dist-preview` 验收，没问题再合进 `main` 推送。
-- 发版号：原版 1.2.22 → 本仓库 `1.2.22+ipstack.1`；页脚的版本检查能识别它比 `1.2.21+ipstack.N` 新。
+- 版本号按本仓库自己的节奏走（`2.x`），不跟原版和 IPStack 版的版本号。
 
 ## 开发
 

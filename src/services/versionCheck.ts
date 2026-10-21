@@ -9,14 +9,15 @@ import { fetchWithTimeout } from "@/utils/abort";
  *   最新版读本仓库 `dist` 分支产物里的同一个 meta —— 发布流程保证 dist 只在正式版推 main 后才更新，
  *   preview 不会让站长看到「有新版」。走 raw.githubusercontent.com（后端 CSP 的 connect-src 默认放行），
  *   只在登录后查，结果在本机缓存 12 小时（失败 1 小时），访客不会多出任何第三方请求。
- * - 本定制版查的是自己仓库的 `dist`：查原版的话，原版一出新版就会提示站长「有新版」，照着换回原版就丢了定制功能，
- *   而定制版自己发的新版（ipstack.N）反倒提示不出来。
+ * - Lumina Prism 查的是自己仓库的 `dist`：查原版或 IPStack 定制版的话，它们一出新版就会提示站长「有新版」，
+ *   照着换过去就丢了 Prism 的功能，而 Prism 自己发的新版反倒提示不出来。
  */
 
 export const THEME_RELEASE_INDEX_URL =
-  "https://raw.githubusercontent.com/ehrenfelssotiris553-ops/CFSM-LuminaPlus-IPStack/dist/index.html";
+  "https://raw.githubusercontent.com/ehrenfelssotiris553-ops/CFSM-LuminaPlus-Prism/dist/index.html";
 
-const LATEST_THEME_CACHE_KEY = "cfsm-luminaplus:theme-latest-version";
+// 和 IPStack 版共用一个站点时浏览器存储也是共用的；只有这一项不能共用，不然两个主题会拿对方的版本号提示「有新版」。
+const LATEST_THEME_CACHE_KEY = "cfsm-lumina-prism:theme-latest-version";
 const LATEST_THEME_TTL_MS = 12 * 60 * 60 * 1000;
 const LATEST_THEME_FAILURE_TTL_MS = 60 * 60 * 1000;
 const LATEST_THEME_TIMEOUT_MS = 8_000;

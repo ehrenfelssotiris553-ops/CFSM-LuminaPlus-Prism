@@ -15,8 +15,8 @@ import { formatVersionLabel } from "@/utils/versionCompare";
  */
 
 const BACKEND_REPO_URL = "https://github.com/huilang-me/CF-Server-Monitor";
-// 指向本定制版仓库：版本号和「新版」提醒都按定制版算，README 里注明了原版出处。
-const THEME_REPO_URL = "https://github.com/ehrenfelssotiris553-ops/CFSM-LuminaPlus-IPStack";
+// 指向 Lumina Prism 仓库：版本号和「新版」提醒都按 Prism 算，README 里注明了 LuminaPlus 原版和 IPStack 版的出处。
+const THEME_REPO_URL = "https://github.com/ehrenfelssotiris553-ops/CFSM-LuminaPlus-Prism";
 const THEME_CHANGELOG_URL = `${THEME_REPO_URL}/blob/main/CHANGELOG.md`;
 
 export function SiteFooter() {
@@ -38,7 +38,7 @@ export function SiteFooter() {
       <span className="site-footer-item">
         Theme by{" "}
         <FooterLink href={THEME_REPO_URL} hint={versionHint(theme.current)}>
-          LuminaPlus
+          Lumina Prism
         </FooterLink>
         {theme.update && (
           <UpdateBadge href={THEME_CHANGELOG_URL} current={theme.current} update={theme.update} />

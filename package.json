@@ -1,7 +1,7 @@
 {
-  "name": "cfsm-theme-luminaplus",
+  "name": "cfsm-theme-lumina-prism",
   "private": true,
-  "version": "1.2.21+ipstack.7",
+  "version": "2.0.0",
   "type": "module",
   "description": "CF-Server-Monitor theme, ported from Komari-Theme-LuminaPlus",
   "author": "codex&shark&shanyang",

@@ -85,14 +85,14 @@
 源码在 `main` 分支，推送后由 GitHub Actions 构建并发布到 `dist` 分支。在 CF 监控后台的自定义主题 URL 填：
 
 ```text
-https://github.com/ehrenfelssotiris553-ops/CFSM-LuminaPlus-IPStack/tree/dist
+https://github.com/ehrenfelssotiris553-ops/CFSM-LuminaPlus-Prism/tree/dist
 ```
 
 - 填 `tree/dist`：Workers 对分支地址缓存约一小时，过了缓存自动是新版。
 - 想锁定某一版：把 `dist` 换成那一版产物提交的 40 位 SHA（`dist` 分支的提交记录里可以看到）。
 
-登录后台后，本仓库发新版时页脚「LuminaPlus」后面会出现「新版 vX」。版本检查查的是本仓库的 `dist`，
-不会提示原版的新版本；同一定制线按 `+ipstack.N` 序号比较。原版更新的合并方法见 [README](../README.md) 的「同步原版」。
+登录后台后，本仓库发新版时页脚「Lumina Prism」后面会出现「新版 vX」。版本检查查的是本仓库的 `dist`，
+不会提示原版或 IPStack 版的新版本。原版和 IPStack 版更新的合并方法见 [README](../README.md) 的「同步原版和 IPStack 版」。
 
 ## 配置格式
 

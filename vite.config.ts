@@ -45,7 +45,7 @@ function themeVersionMeta(version: string): Plugin {
     transformIndexHtml(html) {
       return html.replace(
         "</head>",
-        `  <meta name="theme-version" content="LuminaPlus v${version}" />\n  </head>`,
+        `  <meta name="theme-version" content="Lumina Prism v${version}" />\n  </head>`,
       );
     },
   };
