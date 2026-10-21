@@ -1,13 +1,17 @@
 import { useCallback, useSyncExternalStore } from "react";
 import { useThemeSettings } from "@/hooks/useThemeSettings";
+import { canSyncSiteTheme } from "@/services/siteOwner";
+import { patchLocalThemeSettings } from "@/services/themeSettingsStore";
 import { subscribeMediaQuery } from "@/utils/mediaQuery";
-import { isNodeViewMode, NODE_VIEW_MODES, type NodeViewMode } from "@/utils/themeSettings";
+import { NODE_VIEW_MODES, type NodeViewMode } from "@/utils/themeSettings";
 
-// Legacy keys retained so session view-mode overrides survive the rename.
-const DESKTOP_OVERRIDE_KEY = "cfsm-luminaplus:node-view-mode-session:desktop";
-const MOBILE_OVERRIDE_KEY = "cfsm-luminaplus:node-view-mode-session:mobile";
+// 老版本在快捷栏选布局只存在这个标签页里（sessionStorage）；现在站长选的就是全站默认，这两个键不再用，打开时顺手清掉。
+const LEGACY_OVERRIDE_KEYS = [
+  "cfsm-luminaplus:node-view-mode-session:desktop",
+  "cfsm-luminaplus:node-view-mode-session:mobile",
+];
 export const MOBILE_VIEW_MODE_QUERY = "(max-width: 720px)";
-// 循环顺序：大卡 → 小卡 → 迷你 → 列表 → 六种新布局 → 大卡……（快捷栏现在用弹出菜单直接选，这里给键盘 / 测试用）
+// 循环顺序：大卡 → 小卡 → 迷你 → 列表 → 六种新布局 → 大卡……（快捷栏用弹出菜单直接选，这里给键盘 / 测试用）
 const VIEW_MODE_CYCLE: readonly NodeViewMode[] = NODE_VIEW_MODES;
 // 列表档天生不适合窄屏,仅桌面可用:移动端从循环里剔除,且默认值解析成 list 时兜底回 compact。
 export const MOBILE_VIEW_MODES: readonly NodeViewMode[] = NODE_VIEW_MODES.filter((mode) => mode !== "list");
@@ -27,53 +31,18 @@ export function getNextViewMode(mode: NodeViewMode, device: ViewModeDevice): Nod
   return cycle[(cycle.indexOf(normalized) + 1) % cycle.length] ?? cycle[0];
 }
 
-interface ViewModeState {
-  device: ViewModeDevice;
-  override: NodeViewMode | null;
-}
-
-const listeners = new Set<() => void>();
-let mediaQuery: MediaQueryList | null = null;
-let subscribedMediaQuery: MediaQueryList | null = null;
-let snapshot: ViewModeState = {
-  device: "desktop",
-  override: null,
-};
-
-function readOverride(key: string): NodeViewMode | null {
-  try {
-    const value = sessionStorage.getItem(key);
-    if (value == null) return null;
-    // 未知旧值回退到小卡，并在下次切换时被正常覆盖。
-    return isNodeViewMode(value) ? value : "compact";
-  } catch {
-    return null;
-  }
-}
-
-function writeOverride(key: string, value: NodeViewMode) {
-  try {
-    sessionStorage.setItem(key, value);
-  } catch {
-    // session storage 不可用时，保留内存里的行为。
-  }
-}
-
-/** 设置页「一键套用」换了默认布局：清掉这个标签页里用快捷栏临时选过的布局，首页才会跟着变。 */
+/** 老版本留下的「这个标签页临时用的布局」：现在不用了，清掉。 */
 export function clearViewModeOverrides() {
-  clearOverride(DESKTOP_OVERRIDE_KEY);
-  clearOverride(MOBILE_OVERRIDE_KEY);
-  refreshSnapshot();
-  emit();
-}
-
-function clearOverride(key: string) {
-  try {
-    sessionStorage.removeItem(key);
-  } catch {
-    // session storage 不可用时没什么可清的。
+  for (const key of LEGACY_OVERRIDE_KEYS) {
+    try {
+      sessionStorage.removeItem(key);
+    } catch {
+      // session storage 不可用时没什么可清的。
+    }
   }
 }
+
+let mediaQuery: MediaQueryList | null = null;
 
 function getMediaQuery() {
   if (typeof window === "undefined" || !window.matchMedia) return null;
@@ -81,134 +50,41 @@ function getMediaQuery() {
   return mediaQuery;
 }
 
-function getDevice(): ViewModeState["device"] {
+function getDevice(): ViewModeDevice {
   return getMediaQuery()?.matches ? "mobile" : "desktop";
 }
 
-function getOverrideKey(device: ViewModeState["device"]) {
-  return device === "mobile" ? MOBILE_OVERRIDE_KEY : DESKTOP_OVERRIDE_KEY;
-}
-
-function readSnapshot(): ViewModeState {
-  const device = getDevice();
-  return {
-    device,
-    override: readOverride(getOverrideKey(device)),
-  };
-}
-
-function refreshSnapshot() {
-  const next = readSnapshot();
-  if (snapshot.device !== next.device || snapshot.override !== next.override) {
-    snapshot = next;
-  }
-  return snapshot;
-}
-
-let snapshotInitialized = false;
-
-function getSnapshot(): ViewModeState {
-  // useSyncExternalStore 每次 render 都会调 getSnapshot，所以它必须便宜且稳定。
-  // 只读一次 storage/matchMedia 来初始化缓存；之后由 media/storage/setMode
-  // 处理器保持 snapshot 新鲜。
-  if (!snapshotInitialized) {
-    snapshotInitialized = true;
-    refreshSnapshot();
-  }
-  return snapshot;
-}
-
-function emit() {
-  for (const listener of listeners) listener();
-}
-
-const handleMediaChange = () => {
-  refreshSnapshot();
-  emit();
-};
-
-let mediaUnsubscribe: (() => void) | null = null;
-
-function ensureMediaSubscription() {
-  const mq = getMediaQuery();
-  if (!mq || subscribedMediaQuery === mq) return;
-  clearMediaSubscription();
-  subscribedMediaQuery = mq;
-  mediaUnsubscribe = subscribeMediaQuery(mq, handleMediaChange);
-}
-
-function clearMediaSubscription() {
-  mediaUnsubscribe?.();
-  mediaUnsubscribe = null;
-  subscribedMediaQuery = null;
-}
-
-// override 存 sessionStorage(按标签页隔离),storage 事件只覆盖共享同一 session 的
-// window.open/iframe 场景,普通独立标签页之间不同步。整个模块只注册一次(在第一个
-// 订阅者时),所有消费者共享同一份全局状态,否则 N 个组件会装 N 个一样的 listener。
-const handleStorage = (event: StorageEvent) => {
-  if (event.key === DESKTOP_OVERRIDE_KEY || event.key === MOBILE_OVERRIDE_KEY) {
-    refreshSnapshot();
-    emit();
-  }
-};
-let storageListenerAttached = false;
-
-function ensureStorageSubscription() {
-  if (storageListenerAttached || typeof window === "undefined") return;
-  window.addEventListener("storage", handleStorage);
-  storageListenerAttached = true;
-}
-
-function clearStorageSubscription() {
-  if (!storageListenerAttached || typeof window === "undefined") return;
-  window.removeEventListener("storage", handleStorage);
-  storageListenerAttached = false;
-}
+let legacyCleared = false;
 
 function subscribe(listener: () => void) {
-  const wasEmpty = listeners.size === 0;
-  listeners.add(listener);
-  if (wasEmpty) {
-    ensureMediaSubscription();
-    ensureStorageSubscription();
+  if (!legacyCleared) {
+    legacyCleared = true;
+    clearViewModeOverrides();
   }
-
-  return () => {
-    listeners.delete(listener);
-    if (listeners.size === 0) {
-      clearMediaSubscription();
-      clearStorageSubscription();
-    }
-  };
+  const mq = getMediaQuery();
+  return mq ? subscribeMediaQuery(mq, listener) : () => {};
 }
 
+/**
+ * 首页用哪种卡片布局：就是站点设置里的「电脑默认 / 手机默认」。
+ * 站长在快捷栏选一个，改的就是这台设备那一类（手机或电脑）的全站默认，随后自动同步到后端，访客下次打开就跟着变；
+ * 访客没有布局按钮（setMode 对访客什么都不做）。
+ */
 export function useViewMode() {
   const themeSettings = useThemeSettings();
-  const state = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
-  const isMobile = state.device === "mobile";
-  const defaultMode = isMobile
-    ? themeSettings.mobileNodeViewMode
-    : themeSettings.desktopNodeViewMode;
-  const resolved = state.override ?? defaultMode;
+  const device = useSyncExternalStore(subscribe, getDevice, getDevice);
+  const isMobile = device === "mobile";
+  const defaultMode = isMobile ? themeSettings.mobileNodeViewMode : themeSettings.desktopNodeViewMode;
   // 移动端若被解析成 list(默认值被强制写成 list 等极端情况),兜底回 compact —— 列表仅桌面可用。
-  const mode = normalizeViewModeForDevice(resolved, state.device);
-  const nextMode = getNextViewMode(mode, state.device);
+  const mode = normalizeViewModeForDevice(defaultMode, device);
+  const nextMode = getNextViewMode(mode, device);
 
   const setMode = useCallback(
     (next: NodeViewMode) => {
-      const key = getOverrideKey(state.device);
-      // 选中当前主题默认值时，清掉 session override 重新跟随默认值，而不是钉一个
-      // 永远去不掉的 override（那样还会让未来的默认值变化无法生效）。
-      if (next === defaultMode) {
-        clearOverride(key);
-      } else {
-        writeOverride(key, next);
-      }
-      refreshSnapshot();
-      emit();
+      if (!canSyncSiteTheme() || next === mode) return;
+      patchLocalThemeSettings(isMobile ? { mobileNodeViewMode: next } : { desktopNodeViewMode: next });
     },
-    [state.device, defaultMode],
+    [isMobile, mode],
   );
 
   const toggleMode = useCallback(() => {
@@ -216,7 +92,7 @@ export function useViewMode() {
   }, [nextMode, setMode]);
 
   return {
-    device: state.device,
+    device,
     mode,
     nextMode,
     setMode,
@@ -224,13 +100,10 @@ export function useViewMode() {
   };
 }
 
-// 给用不了 hook 的场景做非响应式读取（如 class ErrorBoundary 的诊断）。返回
-// device + 任意 session override；不含主题默认值，因为解析它需要 themeSettings（一个
-// hook），但 device + override 在常见情况下已能区分 compact 和 large。
+// 给用不了 hook 的场景做非响应式读取（如 class ErrorBoundary 的诊断）。
 export function readViewModeHint(): string {
   try {
-    const { device, override } = readSnapshot();
-    return override ? `${device}/${override}(override)` : `${device}/default`;
+    return getDevice();
   } catch {
     return "unknown";
   }

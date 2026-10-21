@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { CSSProperties } from "react";
 import { RefreshCw } from "lucide-react";
 import { getLocale, memoByLanguage, t, type MessageKey } from "@/i18n";
 import { useCfUsage } from "@/hooks/useCfUsage";
@@ -143,6 +144,8 @@ export function CfUsagePanel() {
               key={meter.metric}
               className="cf-usage-meter"
               data-level={meter.level}
+              // 各风格画法不同（圆环、竖电平表…），都从 --ratio 取比例，见 styles/page-skins.css。
+              style={{ "--ratio": Math.min(1, meter.ratio) } as CSSProperties}
               title={meterTitle(meter.metric, query.data?.[day])}
             >
               <div className="cf-usage-meter-top">

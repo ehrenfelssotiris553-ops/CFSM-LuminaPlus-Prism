@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { clearCssColorCache } from "@/components/node/CanvasStrip";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { useLocalThemeSettings } from "@/hooks/useThemeSettings";
+import { useCanSyncSiteTheme } from "@/services/siteOwner";
 import {
   getLocalThemeSettings,
   saveLocalThemeSettings,
@@ -241,6 +242,30 @@ function applyPalette(palette: PaletteDraft) {
   applyDarkDepth(palette.darkDepth);
 }
 
+/**
+ * 现在有没有自定义过的指标配色（站点设置叠上站长这台设备没同步上去的）。
+ * 首页风格面板据此在换风格后提示「指标配色还是你改过的，要不要恢复成风格自带的」。
+ */
+export function useHasCustomMetricColors(): boolean {
+  const { data: config } = usePublicConfig();
+  const localSettings = useLocalThemeSettings();
+  return useMemo(
+    () => Object.keys(resolvePalette(config?.theme_settings, localSettings).colors).length > 0,
+    [config?.theme_settings, localSettings],
+  );
+}
+
+/** 指标配色恢复成风格自带的（只清颜色，暗色深度不动）。登录站长用，随后自动同步到后端。 */
+export function resetMetricColorsToSkin(site: Record<string, unknown> | undefined) {
+  const local = getLocalThemeSettings();
+  const next: PaletteDraft = { colors: {}, darkDepth: resolvePalette(site, local).darkDepth };
+  const rest: Record<string, unknown> = { ...local };
+  delete rest[SETTINGS_KEY];
+  delete rest[DARK_DEPTH_SETTINGS_KEY];
+  saveLocalThemeSettings({ ...rest, ...pickPaletteOverrides(next, readPaletteDraft(site)) });
+  applyPalette(next);
+}
+
 /** 供 canvas 卡片（NodeCard）订阅：配色变化时拼进 redrawKey 触发重绘。 */
 export function useMetricColorsVersion(): number {
   return useSyncExternalStore(
@@ -262,9 +287,14 @@ export function readEffectiveColors(): Record<MetricColorKey, string> {
 }
 
 /** 全局：把后端保存的配色应用到所有访客（在 AppShell 挂载一次）。 */
+const NO_LOCAL_PALETTE: Record<string, unknown> = {};
+
 export function useMetricColorsSync() {
   const { data: config } = usePublicConfig();
-  const localSettings = useLocalThemeSettings();
+  // 访客改不了配色：以前存在浏览器里的本机配色不再用，一律跟站点走（见 useThemeSettings）。
+  const isOwner = useCanSyncSiteTheme();
+  const ownLocal = useLocalThemeSettings();
+  const localSettings = isOwner ? ownLocal : NO_LOCAL_PALETTE;
   // 站点预设打底，本机覆盖在上（逐个颜色叠，见 resolvePalette）。
   // 只读后端会把访客本机保存的配色冲掉（刷新即丢失）。
   const palette = useMemo(

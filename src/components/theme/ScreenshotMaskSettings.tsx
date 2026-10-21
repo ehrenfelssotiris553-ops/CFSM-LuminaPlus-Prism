@@ -1,16 +1,8 @@
 import { useMemo } from "react";
-import { Link } from "react-router-dom";
 import { t, type MessageKey } from "@/i18n";
 import { SettingToggle } from "@/components/theme/SettingControls";
-import { useScreenshotMask } from "@/hooks/useScreenshotMask";
 import { useVisibleNodes } from "@/hooks/useVisibleNodes";
-import {
-  MASK_FIELDS,
-  setPickingMask,
-  toggleMaskedNode,
-  writeScreenshotMask,
-  type MaskField,
-} from "@/utils/screenshotMask";
+import { MASK_FIELDS, type MaskField, type MaskFields, type MaskMode } from "@/utils/screenshotMask";
 
 const FIELD_LABEL_KEYS: Record<MaskField, MessageKey> = {
   name: "mask.fieldName",
@@ -20,29 +12,67 @@ const FIELD_LABEL_KEYS: Record<MaskField, MessageKey> = {
   asset: "mask.fieldAsset",
 };
 
+const MODES: readonly MaskMode[] = ["only", "except"];
+
+export interface MaskSettingsValue {
+  screenshotMaskFields: MaskFields;
+  screenshotMaskNodes: string[];
+  screenshotMaskMode: MaskMode;
+  screenshotMaskVisitors: boolean;
+}
+
 /**
- * 设置 → 外观 →「截图打码」。只存本机、不进站点设置（和掉线通知一样），所以不走设置页的草稿和保存按钮，
- * 改了立刻生效。首页快捷栏的按钮和这里是同一份状态。
+ * 设置 → 隐私 →「截图打码」。打码哪些内容、哪几台、范围、访客要不要也打码，都是站点设置（走设置页草稿，自动同步到后端）。
+ * 站长自己每次打开首页都不打码，点首页小眼睛才打码；打码时卡片右上角的小眼睛能临时显示某一台。
  */
-export function ScreenshotMaskSettings() {
-  const state = useScreenshotMask();
+export function ScreenshotMaskSettings({
+  value,
+  onChange,
+}: {
+  value: MaskSettingsValue;
+  onChange: (patch: Partial<MaskSettingsValue>) => void;
+}) {
   const nodes = useVisibleNodes();
-  const sorted = useMemo(
-    () => [...nodes].sort((left, right) => left.weight - right.weight),
-    [nodes],
-  );
-  const selected = new Set(state.nodes);
+  const sorted = useMemo(() => [...nodes].sort((left, right) => left.weight - right.weight), [nodes]);
+  const selected = new Set(value.screenshotMaskNodes);
   const count = sorted.filter((node) => selected.has(node.uuid)).length;
   const allPicked = sorted.length > 0 && count === sorted.length;
+  const except = value.screenshotMaskMode === "except";
+  const toggleNode = (uuid: string) =>
+    onChange({
+      screenshotMaskNodes: selected.has(uuid)
+        ? value.screenshotMaskNodes.filter((id) => id !== uuid)
+        : [...value.screenshotMaskNodes, uuid],
+    });
 
   return (
     <div className="flex flex-col gap-4">
       <SettingToggle
-        title={t("mask.enable")}
-        desc={t("mask.enableDesc")}
-        checked={state.on}
-        onChange={(on) => writeScreenshotMask({ on })}
+        title={t("mask.visitors")}
+        desc={t("mask.visitorsDesc")}
+        checked={value.screenshotMaskVisitors}
+        onChange={(on) => onChange({ screenshotMaskVisitors: on })}
       />
+
+      <div>
+        <div className="setting-subhead">
+          <span className="setting-subhead-title">{t("mask.modeTitle")}</span>
+        </div>
+        <div className="instance-segmented is-prominent is-even" role="radiogroup" aria-label={t("mask.modeTitle")}>
+          {MODES.map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              role="radio"
+              aria-checked={value.screenshotMaskMode === mode}
+              data-active={value.screenshotMaskMode === mode ? "true" : "false"}
+              onClick={() => onChange({ screenshotMaskMode: mode })}
+            >
+              {t(mode === "only" ? "mask.modeOnly" : "mask.modeExcept")}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div>
         <div className="setting-subhead">
@@ -54,8 +84,8 @@ export function ScreenshotMaskSettings() {
               key={field}
               type="button"
               className="mask-field-chip"
-              aria-pressed={state.fields[field]}
-              onClick={() => writeScreenshotMask({ fields: { ...state.fields, [field]: !state.fields[field] } })}
+              aria-pressed={value.screenshotMaskFields[field]}
+              onClick={() => onChange({ screenshotMaskFields: { ...value.screenshotMaskFields, [field]: !value.screenshotMaskFields[field] } })}
             >
               {t(FIELD_LABEL_KEYS[field])}
             </button>
@@ -64,53 +94,39 @@ export function ScreenshotMaskSettings() {
       </div>
 
       <div>
-        <div className="setting-subhead flex flex-wrap items-center justify-between gap-2">
-          <span className="setting-subhead-title">{t("mask.nodesTitle", { n: count })}</span>
-          <span className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="control-button px-3 py-1.5 text-[12px]"
-              disabled={sorted.length === 0}
-              onClick={() =>
-                writeScreenshotMask({ nodes: allPicked ? [] : sorted.map((node) => node.uuid) })
-              }
-            >
-              {t(allPicked ? "mask.pickNone" : "mask.pickAll")}
-            </button>
-            <Link
-              to="/"
-              className="control-button px-3 py-1.5 text-[12px]"
-              onClick={() => {
-                writeScreenshotMask({ on: true });
-                setPickingMask(true);
-              }}
-            >
-              {t("mask.pickOnHome")}
-            </Link>
-          </span>
+        <div className="setting-subhead">
+          <span className="setting-subhead-title">{t(except ? "mask.nodesExceptTitle" : "mask.nodesOnlyTitle")}</span>
+          <span className="setting-hint">{t(except ? "mask.nodesExceptHint" : "mask.nodesOnlyHint")}</span>
         </div>
-        {sorted.length === 0 ? (
-          <p className="setting-hint">{t("common.loading")}</p>
-        ) : (
-          <div className="mask-node-list">
-            {sorted.map((node) => (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="setting-hint">{t("mask.pickedCount", { n: count })}</span>
+          <button
+            type="button"
+            className="theme-manage-button is-compact"
+            disabled={sorted.length === 0}
+            onClick={() => onChange({ screenshotMaskNodes: allPicked ? [] : sorted.map((node) => node.uuid) })}
+          >
+            {t(allPicked ? "mask.pickNone" : "mask.pickAll")}
+          </button>
+        </div>
+        <div className="mask-node-list mt-2">
+          {sorted.map((node) => {
+            const picked = selected.has(node.uuid);
+            const masked = except ? !picked : picked;
+            return (
               <label key={node.uuid} className="surface-inset mask-node-item">
-                <input
-                  type="checkbox"
-                  checked={selected.has(node.uuid)}
-                  onChange={() => toggleMaskedNode(node.uuid)}
-                  className="h-4 w-4 shrink-0 accent-[var(--accent-500)]"
-                />
-                <span className="truncate" title={node.name}>
-                  {node.name?.trim() || node.uuid}
+                <input type="checkbox" checked={picked} onChange={() => toggleNode(node.uuid)} className="h-4 w-4 shrink-0 accent-[var(--accent-500)]" />
+                <span className="min-w-0 flex-1 truncate">{node.name}</span>
+                <span className="mask-node-state" data-masked={masked ? "" : undefined}>
+                  {t(masked ? "mask.stateMasked" : "mask.stateShown")}
                 </span>
               </label>
-            ))}
-          </div>
-        )}
+            );
+          })}
+        </div>
       </div>
 
-      <p className="setting-hint">{t("mask.hint")}</p>
+      <p className="setting-hint">{t("mask.cosmeticHint")}</p>
     </div>
   );
 }

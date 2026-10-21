@@ -1,104 +1,127 @@
 /**
- * 截图打码：只存在这台设备的这个浏览器里（截图是自己的事，不该改站点设置，也不影响别人看到的页面）。
+ * 截图打码。
+ *
+ * 打码哪些内容、哪几台、范围（只打码选中的 / 全部打码但选中的除外）、对访客要不要也打码，都是站点设置
+ * （主题设置「隐私」，站长改了同步到后端）。开没开着分两种人：
+ * - 站长：每次打开首页都不打码，点首页小眼睛才打码（只在这个页面里，不存，刷新就回到不打码）。
+ *   打码时每张被打码的卡片右上角有个小眼睛，点一下临时显示这一台；再点首页小眼睛、或刷新页面就都恢复。
+ * - 访客：站长开了「对访客也打码」就一直是打码的，没有任何按钮；没开就从不打码。
  *
  * 打码的机器在数据层就把文字换成同样长度的假内容（maskText），页面上、悬停提示、读屏文字里都没有真实内容，
- * 截图里还原不出来；样式层再给名称、标签、价格加一层模糊（见 styles/mask.css），看起来是毛玻璃。
+ * 截图里还原不出来；样式层再加一层模糊（见 styles/mask.css）。只是遮住页面上的字，接口里还是真实数据。
  */
 
 export const MASK_FIELDS = ["name", "region", "tags", "price", "asset"] as const;
 export type MaskField = (typeof MASK_FIELDS)[number];
 export type MaskFields = Record<MaskField, boolean>;
+/** only = 只打码选中的机器；except = 全部打码，选中的除外（以后新加的机器也自动打码）。 */
+export type MaskMode = "only" | "except";
 
-export interface ScreenshotMaskState {
-  on: boolean;
-  /** 要打码的机器（uuid）。 */
-  nodes: readonly string[];
-  fields: MaskFields;
-}
+export const DEFAULT_MASK_FIELDS: MaskFields = { name: true, region: true, tags: true, price: true, asset: true };
 
-export const SCREENSHOT_MASK_STORAGE_KEY = "cfsm-luminaplus:screenshot-mask";
-
-const DEFAULT_FIELDS: MaskFields = { name: true, region: true, tags: true, price: true, asset: true };
-const DEFAULT_STATE: ScreenshotMaskState = { on: false, nodes: [], fields: DEFAULT_FIELDS };
-
-export function normalizeScreenshotMask(value: unknown): ScreenshotMaskState {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return DEFAULT_STATE;
-  const raw = value as Record<string, unknown>;
-  const rawFields = raw.fields && typeof raw.fields === "object" ? (raw.fields as Record<string, unknown>) : {};
-  const fields = { ...DEFAULT_FIELDS };
+export function normalizeMaskFields(value: unknown): MaskFields {
+  const raw = value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  const fields = { ...DEFAULT_MASK_FIELDS };
   for (const field of MASK_FIELDS) {
-    if (typeof rawFields[field] === "boolean") fields[field] = rawFields[field] as boolean;
+    if (typeof raw[field] === "boolean") fields[field] = raw[field] as boolean;
   }
-  const nodes = Array.isArray(raw.nodes)
-    ? [...new Set(raw.nodes.filter((id): id is string => typeof id === "string" && id.length > 0))]
-    : [];
-  return { on: raw.on === true, nodes, fields };
+  return fields;
 }
 
-let cached: ScreenshotMaskState | null = null;
-let picking = false;
+export function normalizeMaskMode(value: unknown): MaskMode {
+  return value === "only" ? "only" : "except";
+}
+
+export function normalizeMaskNodes(value: unknown): string[] {
+  return Array.isArray(value)
+    ? [...new Set(value.filter((id): id is string => typeof id === "string" && id.length > 0))].slice(0, 500)
+    : [];
+}
+
+/** 打码相关的站点设置（themeSettings 里的四项）。 */
+export interface MaskSettings {
+  screenshotMaskFields: MaskFields;
+  screenshotMaskNodes: readonly string[];
+  screenshotMaskMode: MaskMode;
+  screenshotMaskVisitors: boolean;
+}
+
+/** 站长这次打开页面的状态：开没开、临时显示了哪几台。只在内存里。 */
+interface MaskSession {
+  on: boolean;
+  revealed: ReadonlySet<string>;
+}
+
+let session: MaskSession = { on: false, revealed: new Set() };
 const listeners = new Set<() => void>();
 
 function emit() {
   for (const listener of listeners) listener();
 }
 
-export function readScreenshotMask(): ScreenshotMaskState {
-  if (cached) return cached;
-  try {
-    cached = normalizeScreenshotMask(JSON.parse(window.localStorage.getItem(SCREENSHOT_MASK_STORAGE_KEY) ?? "null"));
-  } catch {
-    cached = DEFAULT_STATE;
-  }
-  return cached;
+export function readMaskSession(): MaskSession {
+  return session;
 }
 
-export function writeScreenshotMask(patch: Partial<ScreenshotMaskState>) {
-  cached = normalizeScreenshotMask({ ...readScreenshotMask(), ...patch });
-  try {
-    window.localStorage.setItem(SCREENSHOT_MASK_STORAGE_KEY, JSON.stringify(cached));
-  } catch {
-    // 存不了（隐私模式等）就只在这次打开页面内有效。
-  }
-  if (!cached.on) picking = false;
-  emit();
-}
-
-export function subscribeScreenshotMask(listener: () => void): () => void {
+export function subscribeMaskSession(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
 
-/** 选机器模式（首页顶部那条「点卡片选择要打码的机器」）。只在内存里，刷新页面就结束。 */
-export function isPickingMask(): boolean {
-  return picking;
-}
-
-export function setPickingMask(next: boolean) {
-  if (picking === next) return;
-  picking = next;
+/** 首页小眼睛：开 / 关打码。每次切换都把临时显示的卡片清掉。 */
+export function toggleScreenshotMask() {
+  session = { on: !session.on, revealed: new Set() };
   emit();
 }
 
-/** 打开打码时直接进入选机器模式：每次打开都确认一下选了哪几台，点「完成」后页面就干净了。 */
-export function toggleScreenshotMask() {
-  const state = readScreenshotMask();
-  if (state.on) {
-    writeScreenshotMask({ on: false });
-  } else {
-    writeScreenshotMask({ on: true });
-    setPickingMask(true);
-  }
+/** 卡片右上角的小眼睛：临时显示 / 重新遮住这一台。 */
+export function toggleRevealNode(uuid: string) {
+  const revealed = new Set(session.revealed);
+  if (revealed.has(uuid)) revealed.delete(uuid);
+  else revealed.add(uuid);
+  session = { ...session, revealed };
+  emit();
 }
 
-export function toggleMaskedNode(uuid: string) {
-  const { nodes } = readScreenshotMask();
-  writeScreenshotMask({ nodes: nodes.includes(uuid) ? nodes.filter((id) => id !== uuid) : [...nodes, uuid] });
+/** 测试用：回到刚打开页面的状态。 */
+export function resetMaskSessionForTest() {
+  session = { on: false, revealed: new Set() };
 }
 
-/** 这台机器要打码的字段；不打码时返回 null。 */
+/** 合起来的打码状态：卡片、详情页、资产页等都只认这个。 */
+export interface ScreenshotMaskState {
+  /** 现在是不是在打码（站长点了小眼睛，或访客被设置成打码）。 */
+  on: boolean;
+  /** 站长才能点卡片上的小眼睛临时显示。 */
+  canReveal: boolean;
+  fields: MaskFields;
+  mode: MaskMode;
+  nodes: ReadonlySet<string>;
+  revealed: ReadonlySet<string>;
+}
+
+export function resolveScreenshotMask(settings: MaskSettings, isOwner: boolean, current: MaskSession): ScreenshotMaskState {
+  const on = isOwner ? current.on : settings.screenshotMaskVisitors;
+  return {
+    on,
+    canReveal: isOwner && on,
+    fields: settings.screenshotMaskFields,
+    mode: settings.screenshotMaskMode,
+    nodes: new Set(settings.screenshotMaskNodes),
+    revealed: isOwner ? current.revealed : new Set(),
+  };
+}
+
+/** 这台机器在打码范围里（不管有没有被临时显示）。卡片上的小眼睛按这个显示。 */
+export function isNodeInMaskScope(state: ScreenshotMaskState, uuid: string): boolean {
+  if (!state.on) return false;
+  const picked = state.nodes.has(uuid);
+  return state.mode === "only" ? picked : !picked;
+}
+
+/** 这台机器要打码的字段；不打码（或被临时显示）时返回 null。 */
 export function nodeMaskFields(state: ScreenshotMaskState, uuid: string): MaskFields | null {
-  return state.on && state.nodes.includes(uuid) ? state.fields : null;
+  return isNodeInMaskScope(state, uuid) && !state.revealed.has(uuid) ? state.fields : null;
 }
 
 /** 给卡片根元素的 data-mask：哪些字段要加模糊效果，例如 "name tags price"。 */

@@ -46,7 +46,7 @@ describe("home responsive layout contracts", () => {
 
   it("resets child panels on collapse and keeps home-only routing out of controls", () => {
     // 收起快捷栏时，调色盘和卡片布局菜单都要一起关掉。
-    expect(controlsSource).toMatch(/if \(nextCollapsed\) \{\s*setColorsOpen\(false\);\s*setViewMenuOpen\(false\);/);
+    expect(controlsSource).toContain("if (nextCollapsed) setOpenMenu(null);");
     expect(controlsSource).not.toContain("useLocation");
     expect(controlsSource).not.toContain("useSearchParams");
     expect(controlsSource).not.toContain("usePublicConfig");

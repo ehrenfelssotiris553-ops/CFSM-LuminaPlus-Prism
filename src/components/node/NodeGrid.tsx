@@ -1,5 +1,5 @@
 import { t } from "@/i18n";
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentType, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { CircleDollarSign } from "lucide-react";
@@ -28,7 +28,6 @@ import {
   getHomeRegionOptions,
   HOME_ALL_GROUP,
   HOME_ALL_REGION,
-  mergeHomeRegionOrder,
   sortHomeGroupOptions,
 } from "@/utils/homeNodes";
 import { getDisplayRegionCode } from "@/utils/geo";
@@ -38,8 +37,6 @@ import { useHourlyClock } from "@/hooks/useClock";
 import { usePacedRate } from "@/hooks/usePacedRate";
 import { preloadAssetsPage } from "@/services/assetsPageLoader";
 import { retryNodeSync } from "@/services/wsStore";
-import { getLocalThemeSettings, saveLocalThemeSettings } from "@/services/themeSettingsStore";
-import { HomeSortControl } from "./HomeSortControl";
 import {
   getOverviewRating,
   type OverviewRating,
@@ -56,7 +53,7 @@ import {
   RouteNodeCard,
 } from "./LayoutCards";
 import { NodeListView } from "./NodeListView";
-import { RegionTabs } from "./RegionTabs";
+import { HomeFilterBar, STACK_ALL, type GroupMenuItem, type StackFilter } from "./HomeFilterBar";
 import {
   countIpStackCategories,
   IP_STACK_CATEGORIES,
@@ -66,7 +63,7 @@ import {
 } from "@/utils/ipStack";
 import { RenewalReminder } from "./RenewalReminder";
 import { OwnerStrip } from "./OwnerStrip";
-import { MaskPickBar, MaskPickOverlay } from "./MaskPicker";
+import { MaskRevealButton } from "./MaskPicker";
 import { useMaskAsset } from "@/hooks/useScreenshotMask";
 import { maskPrice } from "@/utils/screenshotMask";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
@@ -276,7 +273,8 @@ function HomeOverviewCards({
       data-cards={showAssetCard ? 4 : 3}
       aria-label={t("home.overviewLabel")}
     >
-      <article className="overview-card" data-metric="online">
+      {/* --online-pct：雾玻璃风格把在线卡画成圆环、座舱画成指示灯条用（styles/page-skins.css）。 */}
+      <article className="overview-card" data-metric="online" style={{ "--online-pct": `${onlinePct}%` } as CSSProperties}>
         <span className="overview-card-label">{t("home.onlineNodes")}</span>
         <div className="overview-card-main">
           <p className="overview-card-value">
@@ -468,83 +466,11 @@ function HomeOverviewStrip({
   );
 }
 
-function GroupTabs({
-  groups,
-  selectedGroup,
-  onSelectGroup,
-}: {
-  groups: string[];
-  selectedGroup: string;
-  onSelectGroup: (group: string) => void;
-}) {
-  return (
-    <div className="home-group-tabs" role="group" aria-label={t("home.groupsLabel")}>
-      <button
-        type="button"
-        aria-pressed={selectedGroup === HOME_ALL_GROUP}
-        data-active={selectedGroup === HOME_ALL_GROUP ? "true" : "false"}
-        onClick={() => onSelectGroup(HOME_ALL_GROUP)}
-      >
-        {t("common.all")}
-      </button>
-      {groups.map((group) => (
-        <button
-          key={group}
-          type="button"
-          aria-pressed={selectedGroup === group}
-          data-active={selectedGroup === group ? "true" : "false"}
-          onClick={() => onSelectGroup(group)}
-          title={group}
-        >
-          {group}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-const STACK_ALL = "all";
-type StackFilter = typeof STACK_ALL | (typeof IP_STACK_CATEGORIES)[number];
 
 function stackCountLabel(category: (typeof IP_STACK_CATEGORIES)[number], n: number): string {
   return t(
     category === "dual" ? "home.stack.dualCount" : category === "ipv4" ? "home.stack.ipv4Count" : "home.stack.ipv6Count",
     { n },
-  );
-}
-
-/** 首页按协议筛选：全部 / 双栈 / 仅 V4 / 仅 V6，按钮上带当前分组、地区下的数量。样式和分组标签一致。 */
-function StackTabs({
-  counts,
-  selected,
-  onSelect,
-}: {
-  counts: Record<IpStackCategory, number>;
-  selected: StackFilter;
-  onSelect: (value: StackFilter) => void;
-}) {
-  return (
-    <div className="home-group-tabs home-stack-tabs" role="group" aria-label={t("home.stack.filterLabel")}>
-      <button
-        type="button"
-        aria-pressed={selected === STACK_ALL}
-        data-active={selected === STACK_ALL ? "true" : "false"}
-        onClick={() => onSelect(STACK_ALL)}
-      >
-        {t("home.stack.all")}
-      </button>
-      {IP_STACK_CATEGORIES.filter((category) => counts[category] > 0 || selected === category).map((category) => (
-        <button
-          key={category}
-          type="button"
-          aria-pressed={selected === category}
-          data-active={selected === category ? "true" : "false"}
-          onClick={() => onSelect(category)}
-        >
-          {stackCountLabel(category, counts[category])}
-        </button>
-      ))}
-    </div>
   );
 }
 
@@ -746,21 +672,6 @@ export function NodeGrid() {
     () => getHomeRegionOptions(groupFilteredNodes, homeRegionOrder),
     [groupFilteredNodes, homeRegionOrder],
   );
-  // 地区栏上拖完的顺序直接写本机设置：访客只影响自己；登录站长跟别的设置一样自动同步到后端。
-  // 当前分组只显示一部分地区，要并回完整顺序，别的分组里排好的不能丢（见 mergeHomeRegionOrder）。
-  const handleRegionReorder = useCallback(
-    (visibleAfter: string[]) => {
-      saveLocalThemeSettings({
-        ...getLocalThemeSettings(),
-        homeRegionOrder: mergeHomeRegionOrder(
-          homeRegionOrder,
-          regionOptions.map((option) => option.code),
-          visibleAfter,
-        ),
-      });
-    },
-    [homeRegionOrder, regionOptions],
-  );
   const regionFilteredNodes = useMemo(
     () =>
       selectedRegion === HOME_ALL_REGION
@@ -781,6 +692,20 @@ export function NodeGrid() {
         : regionFilteredNodes.filter((node) => stackByUuid.get(node.uuid) === selectedStack),
     [regionFilteredNodes, selectedStack, stackByUuid],
   );
+  // 分组下拉里的台数和离线红点：按当前的地区、协议筛选算（不管选了哪个分组），和下拉里看到的一致。
+  const groupMenu = useMemo<GroupMenuItem[]>(() => {
+    const inScope = visibleNodes.filter(
+      (node) =>
+        (selectedRegion === HOME_ALL_REGION || getDisplayRegionCode(node.region) === selectedRegion) &&
+        (selectedStack === STACK_ALL || stackByUuid.get(node.uuid) === selectedStack),
+    );
+    const item = (group: string): GroupMenuItem => {
+      const list = group === HOME_ALL_GROUP ? inScope : inScope.filter((node) => getHomeGroupLabel(node.group) === group);
+      return { group, count: list.length, offline: list.filter((node) => node.online === false).length };
+    };
+    return [item(HOME_ALL_GROUP), ...groupOptions.map(item)];
+  }, [groupOptions, selectedRegion, selectedStack, stackByUuid, visibleNodes]);
+  const scopeOffline = useMemo(() => filteredNodes.some((node) => node.online === false), [filteredNodes]);
   // 排序在分组筛选之后。离线永远沉底(写死,见 homeSort);实时网速走防抖(键平滑+滞回+5s 重排)。
   const orderedNodes = useHomeNodeOrder({
     offlineFirst: themeSettings.isReady && themeSettings.offlineNodesFirst,
@@ -837,7 +762,6 @@ export function NodeGrid() {
     () => (uuidsKey ? uuidsKey.split(UUID_KEY_SEPARATOR) : []),
     [uuidsKey],
   );
-  const visibleUuids = useMemo(() => visibleNodes.map((node) => node.uuid), [visibleNodes]);
   // 列表档由下方 NodeListView 渲染,这里不必构造卡片元素。
   const cards = useMemo(
     () => {
@@ -846,8 +770,8 @@ export function NodeGrid() {
       return orderedUuids.map((uuid) => (
         <div key={uuid} className="relative min-w-0">
           <CardComponent uuid={uuid} />
-          {/* 截图打码的选机器模式才渲染；平时返回 null。 */}
-          <MaskPickOverlay uuid={uuid} />
+          {/* 站长打码时被打码的卡片右上角的小眼睛（临时显示这一台）；平时返回 null。 */}
+          <MaskRevealButton uuid={uuid} />
         </div>
       ));
     },
@@ -879,17 +803,6 @@ export function NodeGrid() {
       {cards}
     </div>
   );
-  // 迷你与列表档的控件栏借用小卡列宽，避免跟随密集内容列而被压窄。
-  const borrowControlsGrid = isMini || isList;
-  const controlsWrapClassName = borrowControlsGrid
-    ? "grid gap-3 home-controls-bar mb-4"
-    : `${gridWrapClassName} home-controls-bar mb-4`;
-  const controlsStyle = borrowControlsGrid
-    ? {
-        gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${GRID_LAYOUT.compact.minColumnWidth}px), 1fr))`,
-      }
-    : gridStyle;
-
   if (!themeSettings.isReady || !storeHydrated) {
     if (!nodeInfoError) return null;
     return (
@@ -982,40 +895,20 @@ export function NodeGrid() {
   return (
     <>
       {homeHeader}
-      {(showGroupTabs || showHomeSort || showStackTabs) && (
-        // 分组标签落首列、排序钉在末列右侧；窄屏时两者保持在同一控件栏内，协议筛选另起一行。
-        <div
-          className={showStackTabs ? `${controlsWrapClassName} has-stack-tabs` : controlsWrapClassName}
-          style={controlsStyle}
-        >
-          {showGroupTabs && (
-            <GroupTabs
-              groups={groupOptions}
-              selectedGroup={selectedGroup}
-              onSelectGroup={setSelectedGroup}
-            />
-          )}
-          {showStackTabs ? (
-            // 协议筛选和排序共用最后一列，不然两张卡宽的屏幕上排序会被挤到单独一行。
-            <div className="home-controls-end">
-              <StackTabs counts={stackCounts} selected={selectedStack} onSelect={setSelectedStack} />
-              {showHomeSort && <HomeSortControl state={sort} />}
-            </div>
-          ) : (
-            showHomeSort && <HomeSortControl state={sort} />
-          )}
-        </div>
-      )}
-      {showRegionBar && (
-        <RegionTabs
-          regions={regionOptions}
-          selectedRegion={selectedRegion}
-          onSelectRegion={setSelectedRegion}
-          onReorder={handleRegionReorder}
-        />
-      )}
+      <HomeFilterBar
+        groups={showGroupTabs ? groupMenu : null}
+        selectedGroup={selectedGroup}
+        onSelectGroup={setSelectedGroup}
+        regions={showRegionBar ? regionOptions : null}
+        selectedRegion={selectedRegion}
+        onSelectRegion={setSelectedRegion}
+        stackCounts={showStackTabs ? stackCounts : null}
+        selectedStack={selectedStack}
+        onSelectStack={setSelectedStack}
+        sort={showHomeSort ? sort : null}
+        scopeOffline={scopeOffline}
+      />
       {isList ? <NodeListView uuids={orderedUuids} /> : gridElement}
-      <MaskPickBar uuids={orderedUuids} allUuids={visibleUuids} />
     </>
   );
 }

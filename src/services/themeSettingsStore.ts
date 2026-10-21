@@ -61,6 +61,13 @@ export function saveLocalThemeSettings(
   for (const listener of editListeners) listener();
 }
 
+/**
+ * 只改几项（首页快捷栏换布局、风格、延迟样式用）：站长这台设备随后自动同步到后端，就是全站默认。
+ */
+export function patchLocalThemeSettings(patch: Record<string, unknown>): void {
+  saveLocalThemeSettings({ ...readStorage(), ...patch } as ThemeSettings & Record<string, unknown>);
+}
+
 export function resetLocalThemeSettings(): void {
   cache = {};
   try {

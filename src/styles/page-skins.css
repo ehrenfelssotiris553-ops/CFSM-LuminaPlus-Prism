@@ -1,0 +1,398 @@
+/*
+ * 首页模块按「风格」各有一套样子：顶部总览、站长区（CF 用量、Agent 更新）、续费提醒、筛选栏。
+ * 布局只管机器卡片，这些模块属于整个页面，所以跟风格走；同样的内容，只是排版和画法不同：
+ *   流光   原样（没有 data-skin，这里一条都不生效）
+ *   素白   报纸头版：双线刊头、衬线大数字、细线分格；用量是账本式虚线；续费是「启事」双线框
+ *   雾玻璃 毛玻璃；在线数画成圆环；用量是五个小圆环
+ *   终端   等宽字、命令行前缀；条都是一格一格的字符块；选中的筛选加方括号
+ *   极光   渐变大数字、背后光晕；渐变发光的条；续费卡渐变描边
+ *   座舱   液晶读数、指示灯；用量是竖向电平表；续费是黄黑斜纹警示条；筛选是实体按键
+ * 只改样式，不加请求、不加脚本；比例从 --online-pct（在线卡）、--ratio（每项用量）来。
+ */
+
+/* ============ 素白 ============ */
+
+:root[data-skin="paper"] .home-overview {
+  gap: 0;
+  border-top: 3px double var(--text-primary);
+  border-bottom: 1px solid var(--text-primary);
+}
+
+:root[data-skin="paper"] .home-overview .overview-card {
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+:root[data-skin="paper"] .home-overview .overview-card + .overview-card {
+  border-left: 1px solid var(--hairline);
+}
+
+:root[data-skin="paper"] .overview-card-label {
+  letter-spacing: 0.18em;
+}
+
+:root[data-skin="paper"] :is(.overview-card-value, .home-overview-strip-value) {
+  font-family: var(--skin-serif);
+  font-weight: 700;
+}
+
+:root[data-skin="paper"] .home-overview-strip {
+  border-width: 1px 0;
+  border-color: var(--text-primary);
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+:root[data-skin="paper"] .owner-strip {
+  border-color: var(--text-primary);
+}
+
+:root[data-skin="paper"] .cf-usage-bar {
+  height: 0;
+  margin: 4px 0 2px;
+  overflow: visible;
+  border-bottom: 1px dotted var(--text-tertiary);
+  border-radius: 0;
+  background: none;
+}
+
+:root[data-skin="paper"] .cf-usage-bar > span {
+  display: none;
+}
+
+:root[data-skin="paper"] .cf-usage-meter-pct {
+  font-family: var(--skin-serif);
+  font-size: 14px;
+}
+
+:root[data-skin="paper"] .cf-usage-meter[data-level="danger"] .cf-usage-meter-pct {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+:root[data-skin="paper"] .renewal-reminder-panel {
+  border: 3px double var(--text-primary);
+  box-shadow: 0 16px 40px -24px rgba(0, 0, 0, 0.4);
+}
+
+:root[data-skin="paper"] .renewal-reminder-head {
+  border-bottom: 1px solid var(--text-primary);
+  font-family: var(--skin-serif);
+  letter-spacing: 0.2em;
+}
+
+:root[data-skin="paper"] .home-filter {
+  padding: 0;
+  border-bottom: 1px solid var(--hairline);
+  border-radius: 0;
+  background: none;
+}
+
+:root[data-skin="paper"] .home-filter-trigger {
+  border-radius: 0;
+  letter-spacing: 0.06em;
+}
+
+:root[data-skin="paper"] .home-filter-trigger[data-active],
+:root[data-skin="paper"] .home-filter-trigger[aria-expanded="true"] {
+  background: none;
+  box-shadow: inset 0 -2px 0 var(--accent-500);
+}
+
+/* ============ 雾玻璃 ============ */
+
+/* 在线卡右上角一个圆环：在线占比。 */
+:root[data-skin="frost"] .overview-card[data-metric="online"]::after {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: conic-gradient(var(--status-success) var(--online-pct, 0%), var(--progress-bg) 0);
+  content: "";
+  mask: radial-gradient(closest-side, transparent 72%, #000 73%);
+}
+
+/* 用量：每项一个小圆环，百分比写在环里。 */
+:root[data-skin="frost"] .cf-usage-meter {
+  position: relative;
+  align-items: center;
+  padding-top: 60px;
+  text-align: center;
+}
+
+:root[data-skin="frost"] .cf-usage-meter::before {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: conic-gradient(var(--meter-color) calc(var(--ratio, 0) * 100%), var(--progress-bg) 0);
+  content: "";
+  mask: radial-gradient(closest-side, transparent 76%, #000 77%);
+  transform: translateX(-50%);
+}
+
+:root[data-skin="frost"] .cf-usage-meter-top {
+  display: contents;
+}
+
+:root[data-skin="frost"] .cf-usage-meter-pct {
+  position: absolute;
+  top: 19px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+:root[data-skin="frost"] .cf-usage-meter-label {
+  order: 2;
+  font-size: 11px;
+}
+
+:root[data-skin="frost"] .cf-usage-bar {
+  display: none;
+}
+
+:root[data-skin="frost"] .cf-usage-meter-value {
+  order: 3;
+}
+
+:root[data-skin="frost"] .renewal-reminder-panel {
+  background: color-mix(in srgb, var(--surface-elev) 82%, transparent);
+  box-shadow: 0 20px 46px -24px rgba(15, 23, 42, 0.42), 0 0 0 1px color-mix(in srgb, var(--status-warning) 30%, transparent);
+  backdrop-filter: blur(18px) saturate(1.3);
+}
+
+:root[data-skin="frost"] .home-filter {
+  background: color-mix(in srgb, var(--surface-a) 55%, transparent);
+  box-shadow: inset 0 0 0 1px var(--border);
+  backdrop-filter: blur(12px);
+}
+
+/* ============ 终端 ============ */
+
+:root[data-skin="terminal"] .overview-card-label::before,
+:root[data-skin="terminal"] .owner-strip-title::before {
+  color: var(--accent-500);
+  content: "$ ";
+}
+
+:root[data-skin="terminal"] :is(.overview-bar, .cf-usage-bar) {
+  height: 10px;
+  border-radius: 0;
+  mask: repeating-linear-gradient(90deg, #000 0 6px, transparent 6px 8px);
+}
+
+:root[data-skin="terminal"] :is(.overview-bar, .cf-usage-bar) > span {
+  border-radius: 0;
+}
+
+:root[data-skin="terminal"] .overview-block {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+:root[data-skin="terminal"] .renewal-reminder-panel {
+  border: 1px dashed color-mix(in srgb, var(--status-warning) 60%, transparent);
+}
+
+:root[data-skin="terminal"] .renewal-reminder-row-main::before {
+  color: var(--accent-500);
+  content: "> ";
+}
+
+:root[data-skin="terminal"] .home-filter {
+  border-radius: 2px;
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+:root[data-skin="terminal"] .home-filter-trigger,
+:root[data-skin="terminal"] .home-filter-option {
+  border-radius: 1px;
+}
+
+:root[data-skin="terminal"] .home-filter-trigger[data-active] .home-filter-text::before {
+  content: "[";
+}
+
+:root[data-skin="terminal"] .home-filter-trigger[data-active] .home-filter-text::after {
+  content: "]";
+}
+
+/* ============ 极光 ============ */
+
+:root[data-skin="aurora"] .home-overview {
+  position: relative;
+}
+
+:root[data-skin="aurora"] .overview-card[data-metric="online"] {
+  background:
+    radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, #22d3ee 22%, transparent) 0%, transparent 60%),
+    radial-gradient(90% 90% at 80% 20%, color-mix(in srgb, #8b5cf6 16%, transparent) 0%, transparent 70%),
+    var(--surface-a);
+}
+
+:root[data-skin="aurora"] :is(.overview-card-value, .home-overview-strip-value) {
+  background: linear-gradient(90deg, var(--progress-cpu), var(--progress-memory));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+}
+
+:root[data-skin="aurora"] .cf-usage-bar > span {
+  background: linear-gradient(90deg, var(--progress-cpu), var(--progress-memory));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--progress-memory) 45%, transparent);
+}
+
+:root[data-skin="aurora"] .cf-usage-meter[data-level="danger"] .cf-usage-bar > span {
+  background: linear-gradient(90deg, #fb923c, #fb7185);
+  box-shadow: 0 0 10px color-mix(in srgb, #fb7185 45%, transparent);
+}
+
+:root[data-skin="aurora"] .renewal-reminder-panel {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--surface-elev), var(--surface-elev)) padding-box,
+    linear-gradient(90deg, #22d3ee, #a78bfa, #f472b6) border-box;
+}
+
+:root[data-skin="aurora"] .home-filter-trigger[data-active]:not([aria-expanded="true"]) {
+  background: linear-gradient(90deg, var(--progress-cpu), var(--progress-memory));
+  color: #fff;
+}
+
+/* ============ 座舱 ============ */
+
+/* 读数像液晶：等宽、琥珀色、深色时带一点光。 */
+:root[data-skin="cockpit"] :is(.overview-card-value, .home-overview-strip-value, .cf-usage-meter-pct) {
+  color: var(--accent-500);
+  font-family: var(--skin-mono);
+}
+
+:root[data-skin="cockpit"][data-appearance="dark"] :is(.overview-card-value, .home-overview-strip-value, .cf-usage-meter-pct) {
+  text-shadow: 0 0 8px color-mix(in srgb, var(--accent-500) 55%, transparent);
+}
+
+:root[data-skin="cockpit"] .overview-card {
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.18);
+}
+
+/* 在线块 / 在线条变成指示灯。 */
+:root[data-skin="cockpit"] .overview-block {
+  border-radius: 2px;
+}
+
+:root[data-skin="cockpit"][data-appearance="dark"] .overview-block.is-online {
+  box-shadow: 0 0 6px color-mix(in srgb, var(--status-success) 70%, transparent);
+}
+
+:root[data-skin="cockpit"][data-appearance="dark"] .overview-block.is-offline {
+  box-shadow: 0 0 6px color-mix(in srgb, var(--status-offline) 70%, transparent);
+}
+
+:root[data-skin="cockpit"] .overview-bar {
+  mask: repeating-linear-gradient(90deg, #000 0 7px, transparent 7px 9px);
+}
+
+/* 用量：五根竖向电平表，一格一格，绿 → 琥珀 → 红。 */
+:root[data-skin="cockpit"] .cf-usage-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding: 10px 6px 8px;
+  border-radius: 10px;
+  background: var(--surface-sunken);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+:root[data-skin="cockpit"] .cf-usage-meter {
+  align-items: center;
+  text-align: center;
+}
+
+:root[data-skin="cockpit"] .cf-usage-meter:last-child:nth-child(odd) {
+  grid-column: auto;
+}
+
+:root[data-skin="cockpit"] .cf-usage-meter-top {
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 4px;
+}
+
+:root[data-skin="cockpit"] .cf-usage-meter-top .cf-usage-meter-label {
+  order: -1;
+  font-size: 10.5px;
+}
+
+:root[data-skin="cockpit"] .cf-usage-bar {
+  display: flex;
+  width: 20px;
+  height: 66px;
+  align-items: flex-end;
+  border-radius: 3px;
+  mask: repeating-linear-gradient(0deg, #000 0 5px, transparent 5px 7px);
+}
+
+:root[data-skin="cockpit"] .cf-usage-bar > span {
+  width: 100% !important;
+  height: calc(var(--ratio, 0) * 100%);
+  background: linear-gradient(0deg, var(--status-success), var(--accent-500) 60%, var(--status-error));
+  background-position: bottom;
+  background-size: 100% calc(100% / max(var(--ratio, 0), 0.01));
+}
+
+:root[data-skin="cockpit"] .cf-usage-meter-value {
+  font-size: 10px;
+}
+
+:root[data-skin="cockpit"] .renewal-reminder-head {
+  background: repeating-linear-gradient(-45deg, color-mix(in srgb, var(--status-warning) 22%, transparent) 0 8px, transparent 8px 16px);
+  border-bottom: 1px solid color-mix(in srgb, var(--status-warning) 40%, transparent);
+  font-family: var(--skin-mono);
+  letter-spacing: 0.12em;
+}
+
+:root[data-skin="cockpit"] .renewal-reminder-panel {
+  border-color: color-mix(in srgb, var(--status-warning) 50%, transparent);
+}
+
+/* 筛选：一排实体按键，选中的亮一颗小灯。 */
+:root[data-skin="cockpit"] .home-filter {
+  gap: 5px;
+  padding: 0;
+  background: none;
+}
+
+:root[data-skin="cockpit"] .home-filter-seg + .home-filter-seg::before {
+  display: none;
+}
+
+:root[data-skin="cockpit"] .home-filter-trigger {
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: linear-gradient(var(--surface-elev), var(--surface-sunken));
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+}
+
+:root[data-skin="cockpit"] .home-filter-trigger[data-active]::before {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--accent-500);
+  box-shadow: 0 0 6px var(--accent-500);
+  content: "";
+}
+
+:root[data-skin="cockpit"] .home-filter-trigger[data-active]:not([aria-expanded="true"]),
+:root[data-skin="cockpit"] .home-filter-trigger[aria-expanded="true"] {
+  background: var(--surface-sunken);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+}

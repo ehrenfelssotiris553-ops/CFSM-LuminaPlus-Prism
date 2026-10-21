@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
+import { useCanSyncSiteTheme } from "@/services/siteOwner";
 import {
   getLocalThemeSettings,
   subscribeLocalThemeSettings,
@@ -20,8 +21,9 @@ let cachedPreferred: Appearance | undefined = undefined;
 let cachedResolved: ResolvedThemeSettings | null = null;
 
 /**
- * 后端 `theme_options` 作为站点级预设，本地存储作为访客自己的覆盖。
+ * 后端 `theme_options` 是站点设置；登录站长这台设备上还没同步上去的改动（本地存储）盖在上面。
  * 两者都没设置的键落到主题默认值；默认外观例外，先垫一层后台「默认外观」（`preferred_theme`）。
+ * 访客不能改布局、风格和配色（看不到这些按钮、进不了设置页），以前存在浏览器里的本机设置一律不用。
  */
 function getResolvedThemeSettings(
   remote: RawThemeSettings,
@@ -60,9 +62,13 @@ export function useLocalThemeSettings(): Record<string, unknown> {
   return useSyncExternalStore(subscribeLocalThemeSettings, getSnapshot, getSnapshot);
 }
 
+const NO_LOCAL: Record<string, unknown> = {};
+
 export function useThemeSettings(): ThemeSettingsState {
   const { data: config, isError, isLoading } = usePublicConfig();
-  const local = useLocalThemeSettings();
+  const isOwner = useCanSyncSiteTheme();
+  const ownLocal = useLocalThemeSettings();
+  const local = isOwner ? ownLocal : NO_LOCAL;
   const hasConfig = config != null;
   const isReady = hasConfig || isError;
   return useMemo(

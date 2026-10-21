@@ -19,8 +19,6 @@ import { formatOsLabel, joinTagTitle, nodeDetailLinkLabels } from "./nodeCardSha
 import { formatHealthBucketTooltip } from "./pingBucketText";
 import type { PingOverviewTaskLoadState } from "@/types/cfsm";
 import { HOMEPAGE_PING_BUCKET_COUNT } from "@/hooks/usePingOverview";
-import { toggleMaskedNode } from "@/utils/screenshotMask";
-import { useMaskPick } from "./MaskPicker";
 
 const GAUGE_SEGMENTS = 14;
 
@@ -236,8 +234,6 @@ const NodeRow = memo(function NodeRow({ uuid }: { uuid: string }) {
   const model = useNodeCardModel(uuid, {
     pingBucketCount: HOMEPAGE_PING_BUCKET_COUNT,
   });
-  // 截图打码选机器：行是链接，里面不能再放按钮，就让整行点一下切换选中，不跳详情页。
-  const maskPick = useMaskPick(uuid);
 
   if (!model.node) {
     return <div className="node-list-row is-loading" aria-busy />;
@@ -297,23 +293,12 @@ const NodeRow = memo(function NodeRow({ uuid }: { uuid: string }) {
       to={`/server/${encodeURIComponent(uuid)}`}
       className={clsx("node-list-row", isOffline && "is-offline")}
       data-mask={model.maskTokens}
-      data-picking={maskPick.picking ? "" : undefined}
-      data-picked={maskPick.picking && maskPick.picked ? "" : undefined}
-      title={maskPick.picking ? t("mask.pickCard") : detailLabels.title}
+      title={detailLabels.title}
       aria-label={rowLabel}
-      onClick={
-        maskPick.picking
-          ? (event) => {
-              event.preventDefault();
-              toggleMaskedNode(uuid);
-            }
-          : undefined
-      }
     >
       <div className="node-list-cell node-list-node">
         <div className="node-list-node-text">
           <div className="node-list-node-head">
-            {maskPick.picking ? <span className="mask-pick-check" aria-hidden /> : null}
             <Flag region={node.region} size={14} />
             <span className="node-list-name" title={node.name}>
               {node.name}

@@ -1,27 +1,42 @@
 import { useMemo, useSyncExternalStore } from "react";
+import { useThemeSettings } from "@/hooks/useThemeSettings";
+import { useCanSyncSiteTheme } from "@/hooks/useSiteThemeOptions";
 import {
-  isPickingMask,
+  isNodeInMaskScope,
   maskNodeLike,
   maskText,
   nodeMaskFields,
-  readScreenshotMask,
-  subscribeScreenshotMask,
+  readMaskSession,
+  resolveScreenshotMask,
+  subscribeMaskSession,
 } from "@/utils/screenshotMask";
 
-/** 截图打码的状态（本机）。 */
+/** 合起来的打码状态（站点设置 + 是不是站长 + 站长这次打开页面点没点小眼睛）。 */
 export function useScreenshotMask() {
-  return useSyncExternalStore(subscribeScreenshotMask, readScreenshotMask, readScreenshotMask);
-}
-
-/** 是否正在首页上点卡片选打码的机器。 */
-export function useMaskPicking() {
-  return useSyncExternalStore(subscribeScreenshotMask, isPickingMask, isPickingMask);
+  const { screenshotMaskFields, screenshotMaskNodes, screenshotMaskMode, screenshotMaskVisitors } = useThemeSettings();
+  const isOwner = useCanSyncSiteTheme();
+  const current = useSyncExternalStore(subscribeMaskSession, readMaskSession, readMaskSession);
+  return useMemo(
+    () =>
+      resolveScreenshotMask(
+        { screenshotMaskFields, screenshotMaskNodes, screenshotMaskMode, screenshotMaskVisitors },
+        isOwner,
+        current,
+      ),
+    [current, isOwner, screenshotMaskFields, screenshotMaskMode, screenshotMaskNodes, screenshotMaskVisitors],
+  );
 }
 
 /** 这台机器要打码的字段；不打码时 null。 */
 export function useNodeMask(uuid: string) {
   const state = useScreenshotMask();
   return nodeMaskFields(state, uuid);
+}
+
+/** 卡片右上角的小眼睛：站长打码时、这台在打码范围里才显示；revealed 表示现在临时显示着。 */
+export function useMaskReveal(uuid: string) {
+  const state = useScreenshotMask();
+  return { show: state.canReveal && isNodeInMaskScope(state, uuid), revealed: state.revealed.has(uuid) };
 }
 
 /**

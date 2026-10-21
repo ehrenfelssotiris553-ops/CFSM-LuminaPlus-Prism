@@ -1,3 +1,4 @@
+import "@/styles/settings-page.css";
 import { IpStackEditor } from "@/components/theme/IpStackEditor";
 import { OfflineNotifyToggle } from "@/components/theme/OfflineNotifyToggle";
 import { ScreenshotMaskSettings } from "@/components/theme/ScreenshotMaskSettings";
@@ -26,8 +27,6 @@ import {
   ChevronDown,
   ChevronUp,
   CircleDollarSign,
-  ClipboardCheck,
-  ClipboardCopy,
   Cloud,
   CloudAlert,
   CloudDownload,
@@ -44,6 +43,8 @@ import {
   Rows3,
   Save,
   Search,
+  Palette,
+  ShieldCheck,
   Sparkles,
   Sun,
   SunMoon,
@@ -63,12 +64,10 @@ import {
   cancelSiteThemeSync,
   hasUnsyncedLocalChanges,
   useCanSyncSiteTheme,
-  useSiteThemeOptions,
   useSiteThemeSyncStatus,
   type SiteThemeSyncPhase,
 } from "@/hooks/useSiteThemeOptions";
 import { useLocalThemeSettings } from "@/hooks/useThemeSettings";
-import { useAuth } from "@/hooks/useAuth";
 import { getNodes } from "@/services/api";
 import { getCachedFullNodeList } from "@/services/wsStore";
 import { carrierPingTasks } from "@/services/cfsm/mappers";
@@ -78,7 +77,6 @@ import {
   resetLocalThemeSettings,
   saveLocalThemeSettings,
 } from "@/services/themeSettingsStore";
-import { copyText } from "@/utils/clipboard";
 import type { NodeInfo, PingTask, ThemeSettings } from "@/types/cfsm";
 import {
   calculateCostSummary,
@@ -99,6 +97,9 @@ import { formatVersionLabel } from "@/utils/versionCompare";
 import { MAX_RENEWAL_REMINDER_DAYS } from "@/utils/renewalReminder";
 import {
   dedupeGroupLabels,
+  getHomeRegionOptions,
+  HOME_ALL_REGION,
+  mergeHomeRegionOrder,
   normalizeHomeGroupOrder,
   normalizeHomeRegionOrder,
   sortHomeGroupOptions,
@@ -123,7 +124,11 @@ import {
   type ResolvedThemeSettings,
 } from "@/utils/themeSettings";
 import { LayoutIcon } from "@/components/node/LayoutIcon";
-import { LAYOUT_PAIRS } from "@/utils/layouts";
+import { LATENCY_STYLE_OPTIONS, LAYOUT_PAIRS } from "@/utils/layouts";
+import { LatencyThumb, LayoutThumb, OptionCard } from "@/components/ui/OptionCards";
+import { OwnerOnlyNotice, ScopeBadge, SettingsPreview, SettingsSearch, type SettingsIndexEntry } from "@/components/theme/SettingsParts";
+import { RegionTabs } from "@/components/node/RegionTabs";
+import { useHomeNodeSummaries } from "@/hooks/useNode";
 import { clearViewModeOverrides } from "@/hooks/useViewMode";
 import {
   getDefaultOverviewRatingLabelText,
@@ -395,6 +400,11 @@ function pickManagedThemeSettings(settings: ResolvedThemeSettings) {
     skinDensity: settings.skinDensity,
     skinNumericFont: settings.skinNumericFont,
     mySkin: settings.mySkin,
+    latencyStyle: settings.latencyStyle,
+    screenshotMaskFields: settings.screenshotMaskFields,
+    screenshotMaskNodes: settings.screenshotMaskNodes,
+    screenshotMaskMode: settings.screenshotMaskMode,
+    screenshotMaskVisitors: settings.screenshotMaskVisitors,
   };
 }
 
@@ -873,14 +883,13 @@ const PremiumList = memo(function PremiumList({
  * 设置分组与搜索直达
  * ------------------------------------------------------------------ */
 
-type ThemeTabId = "appearance" | "home" | "card" | "cost" | "ping";
+type ThemeTabId = "appearance" | "layout" | "home" | "ping" | "privacy" | "cost";
 
 /**
- * 设置按分组分页，一次只渲染一组。
- *
- * 原来九个分区一条直线排下来：桌面 4100px（5.4 屏）、手机 6000px（6.7 屏），节点越多越长，
- * 改一项设置要把整页扫一遍。分组后一组只剩 1~2 屏，顶栏和分组导航都钉住不动，来回改也不用滚。
- * 加新设置时一并想好放哪一组。
+ * 设置按分组分页，一次只渲染一组；分组的顺序就是从上往下看首页的顺序。
+ * 原来是外观 / 首页 / 卡片 / 花费 / 延迟五组，有的设置放得不对（浏览器提醒在外观里、公开花费的开关散在两组）；
+ * 现在 6 组，隐私相关（截图打码、访客能看到的花费、隐藏机器）收进一组，提醒和花费放一起。
+ * 加新设置时一并想好放哪一组，并在 SETTINGS_INDEX 里登记，搜索才找得到。
  */
 const THEME_TABS: ReadonlyArray<{
   id: ThemeTabId;
@@ -892,7 +901,13 @@ const THEME_TABS: ReadonlyArray<{
     id: "appearance",
     get label() { return t("settings.tabAppearance"); },
     get hint() { return t("settings.tabAppearanceHint"); },
-    icon: LayoutTemplate,
+    icon: Palette,
+  },
+  {
+    id: "layout",
+    get label() { return t("settings.tabLayout"); },
+    get hint() { return t("settings.tabLayoutHint"); },
+    icon: LayoutGrid,
   },
   {
     id: "home",
@@ -901,10 +916,16 @@ const THEME_TABS: ReadonlyArray<{
     icon: ListFilter,
   },
   {
-    id: "card",
-    get label() { return t("settings.tabCard"); },
-    get hint() { return t("settings.tabCardHint"); },
-    icon: Rows3,
+    id: "ping",
+    get label() { return t("settings.tabPing"); },
+    get hint() { return t("settings.tabPingHint"); },
+    icon: Activity,
+  },
+  {
+    id: "privacy",
+    get label() { return t("settings.tabPrivacy"); },
+    get hint() { return t("settings.tabPrivacyHint"); },
+    icon: ShieldCheck,
   },
   {
     id: "cost",
@@ -912,18 +933,79 @@ const THEME_TABS: ReadonlyArray<{
     get hint() { return t("settings.tabCostHint"); },
     icon: CircleDollarSign,
   },
-  {
-    id: "ping",
-    get label() { return t("settings.tabPing"); },
-    get hint() { return t("settings.tabPingHint"); },
-    icon: Activity,
-  },
 ];
+
+/** 搜索用的索引：每个板块的标题和里面的设置名。 */
+const SETTINGS_INDEX: readonly SettingsIndexEntry[] = [
+  { id: "set-skin", tab: "appearance", title: "skin.title", words: ["skin.accent", "skin.radius", "skin.density", "skin.numericFont", "skin.mine"] },
+  { id: "set-appearance", tab: "appearance", title: "settings.defaultAppearance", words: ["appearance.light", "appearance.dark"] },
+  { id: "set-opacity", tab: "appearance", title: "settings.cardOpacityTitle" },
+  { id: "set-view", tab: "layout", title: "settings.defaultView", words: ["layout.pairs", "settings.desktopDefault", "settings.mobileDefault"] },
+  { id: "set-latency", tab: "layout", title: "lat.setting", words: ["lat.name.capsule", "lat.name.compare", "lat.name.histo", "lat.name.tiles", "lat.name.status", "lat.name.scope"] },
+  { id: "set-card", tab: "layout", title: "settings.cardItems", words: ["settings.showConnections", "settings.showTrafficTotal", "settings.showBilling", "settings.showUptime", "settings.showCardGroup"] },
+  { id: "set-ip-stack", tab: "layout", title: "settings.ipStackTitle", words: ["settings.showIpv4", "settings.showIpv6", "settings.showIpStackFilter"] },
+  { id: "set-home-display", tab: "home", title: "settings.homeDisplay", words: ["settings.showOverview", "settings.phoneOverviewStrip", "settings.showGroupTabs", "settings.showRegionTabs"] },
+  { id: "set-home-sort", tab: "home", title: "settings.sortAndGroup", words: ["settings.enableSort", "settings.groupOrder", "settings.regionOrder", "settings.defaultGroup"] },
+  { id: "set-home-ratings", tab: "home", title: "settings.overviewRating" },
+  { id: "set-owner-info", tab: "home", title: "settings.ownerInfoTitle", words: ["settings.showCfUsage", "settings.showAgentUpdateHint"] },
+  { id: "set-quick-controls", tab: "home", title: "settings.quickButtons", words: ["settings.quickViewMode", "settings.quickColors", "settings.quickMask"] },
+  { id: "set-ping", tab: "ping", title: "settings.homeLatency", words: ["settings.showTheseLines", "settings.defaultLine"] },
+  { id: "set-ping-bindings", tab: "ping", title: "settings.perNodeLine" },
+  { id: "set-ping-display", tab: "ping", title: "settings.pingVisibilityTitle", words: ["settings.showPingIpv4", "settings.showPingIpv6"] },
+  { id: "set-screenshot-mask", tab: "privacy", title: "mask.title", words: ["mask.visitors", "mask.fieldsTitle", "mask.modeTitle"] },
+  { id: "set-visitor-costs", tab: "privacy", title: "settings.visitorCosts", words: ["settings.showAssetOverview", "settings.showCardPrice", "settings.showCostSummary"] },
+  { id: "set-hidden", tab: "privacy", title: "settings.hiddenNodes" },
+  { id: "set-cost", tab: "cost", title: "settings.serverCost", words: ["settings.renewalReminder", "settings.rateApi", "settings.ignoredNodes"] },
+  { id: "set-premium", tab: "cost", title: "settings.purchasePremium" },
+  { id: "set-browser-alerts", tab: "cost", title: "settings.browserAlertsTitle", words: ["settings.showOfflineCountInTitle", "settings.offlineNotify"] },
+];
+
+/** 设置页的默认布局选择：和首页「布局」面板同一种带预览图的卡片。 */
+function LayoutPicker({
+  title,
+  hint,
+  options,
+  value,
+  onPick,
+}: {
+  title: string;
+  hint: string;
+  options: readonly { value: NodeViewMode; label: string }[];
+  value: NodeViewMode;
+  onPick: (mode: NodeViewMode) => void;
+}) {
+  return (
+    <div>
+      <div className="setting-subhead">
+        <span className="setting-subhead-title">{title}</span>
+        <span className="setting-hint">{hint}</span>
+      </div>
+      <div className="opt-grid is-settings mt-2" role="radiogroup" aria-label={title}>
+        {options.map((option) => (
+          <OptionCard
+            key={option.value}
+            thumb={<LayoutThumb mode={option.value} />}
+            name={option.label}
+            sub={t(`viewModeSub.${option.value}` as MessageKey)}
+            active={value === option.value}
+            onPick={() => onPick(option.value)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const DEFAULT_THEME_TAB: ThemeTabId = "appearance";
 
 function isThemeTabId(value: string | null): value is ThemeTabId {
   return value != null && THEME_TABS.some((tab) => tab.id === value);
+}
+
+/** 老链接里的分组名（改版前的「卡片」组现在叫「布局」）。 */
+function resolveThemeTab(value: string | null): ThemeTabId {
+  if (value === "card") return "layout";
+  return isThemeTabId(value) ? value : DEFAULT_THEME_TAB;
 }
 
 /** 停手多久自动保存（站长那边之后还有自动同步自己的防抖，见 SITE_THEME_SYNC_DEBOUNCE_MS）。 */
@@ -1007,7 +1089,7 @@ export function ThemeManage() {
   // 分组页签记在地址里：刷新、后退、把链接发给别人都还在同一组。
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const activeTab: ThemeTabId = isThemeTabId(tabParam) ? tabParam : DEFAULT_THEME_TAB;
+  const activeTab: ThemeTabId = resolveThemeTab(tabParam);
   // 多线路模式下「单线路设置」默认收起（大/小卡片用不到它）。但不能删：迷你卡片与列表永远
   // 走单线路，这里是它们唯一的入口，所以留一个展开按钮。单线路模式下这块恒展开。
   const [taskSearch, setTaskSearch] = useState("");
@@ -1017,14 +1099,11 @@ export function ThemeManage() {
   const [savedLocally, setSavedLocally] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
   const sectionsRef = useRef<HTMLDivElement>(null);
-  const [copied, setCopied] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // 登录站长：改动自动保存并同步到后端，没有保存按钮（口径见 useCanSyncSiteTheme）。
   const canSaveToSite = useCanSyncSiteTheme();
   const siteSync = useSiteThemeSyncStatus();
-  // 「站长专属」那组只对登录站长有用（用量、Agent 版本访客都拿不到），访客不显示。
-  const isOwner = useAuth().data?.logged_in === true;
   const editVersionRef = useRef(0);
 
   // 单字段更新收口,所有表单控件都走它。值未变时原样返回 prev,保留旧的独立 useState
@@ -1127,6 +1206,31 @@ export function ThemeManage() {
       sectionsRef.current?.scrollTo({ top: 0 });
     },
     [setSearchParams],
+  );
+  const goToSetting = useCallback(
+    (entry: SettingsIndexEntry) => {
+      openTab(entry.tab as ThemeTabId);
+      // 换了分组要等新的一组画出来才找得到板块：每 50ms 找一次，最多等 1 秒。
+      let tries = 0;
+      const find = () => {
+        const target = document.getElementById(entry.id);
+        if (!target) {
+          if (++tries < 20) window.setTimeout(find, 50);
+          return;
+        }
+        target.scrollIntoView({ block: "start", behavior: "smooth" });
+        target.classList.add("is-found");
+        window.setTimeout(() => target.classList.remove("is-found"), 1600);
+      };
+      window.setTimeout(find, 50);
+    },
+    [openTab],
+  );
+  // 地区顺序在设置页拖：地区和数量来自首页同一份节点数据。
+  const homeNodeSummaries = useHomeNodeSummaries();
+  const regionChoices = useMemo(
+    () => getHomeRegionOptions(homeNodeSummaries, draft.homeRegionOrder),
+    [homeNodeSummaries, draft.homeRegionOrder],
   );
 
   const toggleTaskExpanded = useCallback((taskId: number) => {
@@ -1555,29 +1659,6 @@ export function ThemeManage() {
   useEffect(() => () => autoSaveRef.current?.(), []);
 
   /**
-   * 当前设置的完整站点快照，「复制配置 JSON」粘到后台「主题自定义配置」用（未登录时才有这个按钮）。
-   * 含配色、卡片上换过的线路等本页之外的设置，拼法见 buildSiteThemeOptions（自动同步用的是同一份）。
-   */
-  const { snapshot: siteDefaults } = useSiteThemeOptions(draftThemeSettings);
-
-  const siteDefaultsJson = useMemo(
-    () => JSON.stringify(siteDefaults, null, 2),
-    [siteDefaults],
-  );
-
-  const handleCopySiteDefaults = async () => {
-    setError(null);
-    if (await copyText(siteDefaultsJson)) {
-      setCopied(true);
-      setMessage(t("settings.copied"));
-      window.setTimeout(() => setCopied(false), 2000);
-      return;
-    }
-    setMessage(null);
-    setError(t("settings.copyFailed"));
-  };
-
-  /**
    * 清掉本地覆盖，回到后端 theme_options + 主题默认值。
    *
    * 工具栏的「改用后端配置」按钮走这里：本机存过的设置只要还在，后端改的配置就永远压不过来
@@ -1642,6 +1723,15 @@ export function ThemeManage() {
     );
   }
 
+  // 布局、风格、配色由站长统一设置：访客没有设置页可改，只给一句说明和回首页 / 去登录（见 SettingsParts）。
+  if (!canSaveToSite) {
+    return (
+      <div className="theme-manage flex flex-col gap-5 py-2">
+        <OwnerOnlyNotice />
+      </div>
+    );
+  }
+
   const adminError = clientsError instanceof Error ? clientsError.message : null;
   const noTasksYet = !tasksLoading && !clientsLoading && sortedTasks.length === 0;
   const noFilteredTaskMatch = !tasksLoading && !clientsLoading && !noTasksYet && filteredTasks.length === 0;
@@ -1664,6 +1754,11 @@ export function ThemeManage() {
           <span>{t("settings.backHome")}</span>
         </Link>
         <h1 className="theme-topbar-title">{t("settings.title")}</h1>
+        <SettingsSearch
+          index={SETTINGS_INDEX}
+          tabLabel={(tab) => THEME_TABS.find((item) => item.id === tab)?.label ?? tab}
+          onGo={goToSetting}
+        />
         <div className="theme-manage-toolbar-actions">
           {/* 两边都没有保存按钮了（停手就自动保存），「重置」退不回已经存下的改动，留着只会让人以为能撤销。
               填错了（不自动保存）把那一项改对即可。 */}
@@ -1680,17 +1775,6 @@ export function ThemeManage() {
             >
               <CloudDownload size={14} />
               <span>{t("settings.useSite")}</span>
-            </button>
-          )}
-          {!canSaveToSite && (
-            <button
-              type="button"
-              onClick={() => void handleCopySiteDefaults()}
-              className="theme-manage-button"
-              title={t("settings.copyJsonTitle")}
-            >
-              {copied ? <ClipboardCheck size={14} /> : <ClipboardCopy size={14} />}
-              <span>{copied ? t("settings.copiedShort") : t("settings.copyJson")}</span>
             </button>
           )}
           <SiteSyncIndicator
@@ -1751,6 +1835,7 @@ export function ThemeManage() {
               <span className="theme-tab-hint">{hint}</span>
             </button>
           ))}
+          <p className="theme-tab-legend">{t("settings.scopeLegend")}</p>
         </nav>
 
         <div className="theme-manage-sections" ref={sectionsRef}>
@@ -1758,7 +1843,7 @@ export function ThemeManage() {
             <>
               <InstancePanel
                 id="set-skin"
-                kicker={t("settings.kickerAppearance")}
+                titleAction={<ScopeBadge kind="site" />}
                 title={t("skin.title")}
                 aside={<Sparkles size={16} />}
               >
@@ -1769,12 +1854,12 @@ export function ThemeManage() {
                   onSaveMine={() => patch("mySkin", draftSkinStyle)}
                 />
               </InstancePanel>
-
               <InstancePanel
                 id="set-appearance"
-                kicker={t("settings.kickerAppearance")}
+                titleAction={<ScopeBadge kind="visitor" />}
                 title={t("settings.defaultAppearance")}
-                aside={<LayoutTemplate size={16} />}
+                aside={<SunMoon size={16} />}
+                description={t("settings.defaultAppearanceDesc")}
               >
                 <div className="instance-segmented is-prominent is-even">
                   {APPEARANCE_OPTIONS.map(({ value, label, icon: Icon }) => (
@@ -1795,145 +1880,9 @@ export function ThemeManage() {
                   ))}
                 </div>
               </InstancePanel>
-
-              <InstancePanel
-                id="set-view"
-                kicker={t("settings.kickerView")}
-                title={t("settings.defaultView")}
-                aside={<LayoutGrid size={16} />}
-              >
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="surface-inset setting-segment-slot flex flex-col gap-3 px-4 py-4">
-                    <div>
-                      <div className="setting-subhead-title">
-                        {t("settings.desktopDefault")}
-                      </div>
-                      <div className="mt-1 setting-hint">
-                        {t("settings.desktopDefaultHint")}
-                      </div>
-                    </div>
-                    <div className="instance-segmented is-prominent layout-options">
-                      {NODE_VIEW_MODE_OPTIONS.map(({ value, label }) => (
-                        <button
-                          key={value}
-                          type="button"
-                          data-active={draft.desktopNodeViewMode === value ? "true" : "false"}
-                          aria-pressed={draft.desktopNodeViewMode === value}
-                          onClick={() => patch("desktopNodeViewMode", value)}
-                          className="inline-flex items-center justify-center gap-2"
-                        >
-                          <LayoutIcon mode={value} size={14} />
-                          <span>{label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="surface-inset setting-segment-slot flex flex-col gap-3 px-4 py-4">
-                    <div>
-                      <div className="setting-subhead-title">
-                        {t("settings.mobileDefault")}
-                      </div>
-                      <div className="mt-1 setting-hint">
-                        {t("settings.mobileDefaultHint")}
-                      </div>
-                    </div>
-                    <div className="instance-segmented is-prominent layout-options">
-                      {MOBILE_VIEW_MODE_OPTIONS.map(({ value, label }) => (
-                        <button
-                          key={value}
-                          type="button"
-                          data-active={draft.mobileNodeViewMode === value ? "true" : "false"}
-                          aria-pressed={draft.mobileNodeViewMode === value}
-                          onClick={() => patch("mobileNodeViewMode", value)}
-                          className="inline-flex items-center justify-center gap-2"
-                        >
-                          <LayoutIcon mode={value} size={14} />
-                          <span>{label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <div className="setting-subhead">
-                    <span className="setting-subhead-title">{t("layout.pairs")}</span>
-                  </div>
-                  <div className="layout-pairs">
-                    {LAYOUT_PAIRS.map(([mode, skin]) => {
-                      const active =
-                        draft.desktopNodeViewMode === mode &&
-                        draft.mobileNodeViewMode === mode &&
-                        draft.skin === skin;
-                      return (
-                        <button
-                          key={mode}
-                          type="button"
-                          className="layout-pair"
-                          aria-pressed={active}
-                          onClick={() => applyLayoutPair(mode, skin)}
-                        >
-                          <LayoutIcon mode={mode} size={16} />
-                          <span className="layout-pair-text">
-                            <b>{t(`viewMode.${mode}` as MessageKey)}</b>
-                            <small>{t("layout.withSkin", { skin: t(`skin.name.${skin}` as MessageKey) })}</small>
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="mt-2 setting-hint">{t("layout.pairsHint")}</p>
-                </div>
-              </InstancePanel>
-
-              <InstancePanel
-                id="set-quick-controls"
-                kicker={t("settings.kickerQuick")}
-                title={t("settings.quickButtons")}
-                aside={<ToggleRight size={16} />}
-              >
-                <div className="grid gap-3 md:grid-cols-2">
-                  <ToggleRow
-                    field="quickShowAppearance"
-                    title={t("settings.quickAppearance")}
-                    desc={t("settings.quickAppearanceDesc")}
-                    checked={draft.quickShowAppearance}
-                    onPatch={patch}
-                  />
-                  <ToggleRow
-                    field="quickShowViewMode"
-                    title={t("settings.quickViewMode")}
-                    desc={t("settings.quickViewModeDesc")}
-                    checked={draft.quickShowViewMode}
-                    onPatch={patch}
-                  />
-                  <ToggleRow
-                    field="quickShowColors"
-                    title={t("settings.quickColors")}
-                    desc={t("settings.quickColorsDesc")}
-                    checked={draft.quickShowColors}
-                    onPatch={patch}
-                  />
-                  <ToggleRow
-                    field="quickShowMask"
-                    title={t("settings.quickMask")}
-                    desc={t("settings.quickMaskDesc")}
-                    checked={draft.quickShowMask}
-                    onPatch={patch}
-                  />
-                  <ToggleRow
-                    field="enableAdminButton"
-                    title={t("settings.quickAdmin")}
-                    desc={t("settings.quickAdminDesc")}
-                    checked={draft.enableAdminButton}
-                    onPatch={patch}
-                  />
-                </div>
-                <p className="mt-3 setting-hint">{t("settings.quickHint")}</p>
-              </InstancePanel>
-
               <InstancePanel
                 id="set-opacity"
-                kicker={t("settings.kickerBackground")}
+                titleAction={<ScopeBadge kind="site" />}
                 title={t("settings.cardOpacityTitle")}
                 aside={<Wallpaper size={16} />}
               >
@@ -1973,32 +1922,159 @@ export function ThemeManage() {
                   </div>
                 </div>
               </InstancePanel>
+            </>
+          )}
+
+          {activeTab === "layout" && (
+            <>
               <InstancePanel
-                id="set-browser-alerts"
-                kicker={t("settings.kickerAppearance")}
-                title={t("settings.browserAlertsTitle")}
-                aside={<BellRing size={16} />}
+                id="set-view"
+                titleAction={<ScopeBadge kind="site" />}
+                title={t("settings.defaultView")}
+                aside={<LayoutGrid size={16} />}
+                description={t("settings.defaultViewDesc")}
               >
-                <p className="setting-hint mb-3">{t("settings.browserAlertsHint")}</p>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <ToggleRow
-                    field="showOfflineCountInTitle"
-                    title={t("settings.showOfflineCountInTitle")}
-                    desc={t("settings.showOfflineCountInTitleDesc")}
-                    checked={draft.showOfflineCountInTitle}
-                    onPatch={patch}
+                <div className="flex flex-col gap-5">
+                  <LayoutPicker
+                    title={t("settings.desktopDefault")}
+                    hint={t("settings.desktopDefaultHint")}
+                    options={NODE_VIEW_MODE_OPTIONS}
+                    value={draft.desktopNodeViewMode}
+                    onPick={(mode) => patch("desktopNodeViewMode", mode)}
                   />
-                  <OfflineNotifyToggle />
+                  <LayoutPicker
+                    title={t("settings.mobileDefault")}
+                    hint={t("settings.mobileDefaultHint")}
+                    options={MOBILE_VIEW_MODE_OPTIONS}
+                    value={draft.mobileNodeViewMode}
+                    onPick={(mode) => patch("mobileNodeViewMode", mode)}
+                  />
+                </div>
+                <div className="mt-4">
+                  <div className="setting-subhead">
+                    <span className="setting-subhead-title">{t("layout.pairs")}</span>
+                  </div>
+                  <div className="layout-pairs">
+                    {LAYOUT_PAIRS.map(([mode, skin]) => {
+                      const active =
+                        draft.desktopNodeViewMode === mode &&
+                        draft.mobileNodeViewMode === mode &&
+                        draft.skin === skin;
+                      return (
+                        <button
+                          key={mode}
+                          type="button"
+                          className="layout-pair"
+                          aria-pressed={active}
+                          onClick={() => applyLayoutPair(mode, skin)}
+                        >
+                          <LayoutIcon mode={mode} size={16} />
+                          <span className="layout-pair-text">
+                            <b>{t(`viewMode.${mode}` as MessageKey)}</b>
+                            <small>{t("layout.withSkin", { skin: t(`skin.name.${skin}` as MessageKey) })}</small>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-2 setting-hint">{t("layout.pairsHint")}</p>
                 </div>
               </InstancePanel>
               <InstancePanel
-                id="set-screenshot-mask"
-                kicker={t("settings.kickerAppearance")}
-                title={t("mask.title")}
-                aside={<EyeOff size={16} />}
+                id="set-latency"
+                titleAction={<ScopeBadge kind="site" />}
+                title={t("lat.setting")}
+                aside={<Activity size={16} />}
+                description={t("lat.settingDesc")}
               >
-                <ScreenshotMaskSettings />
+                <div className="opt-grid is-settings" role="radiogroup" aria-label={t("lat.setting")}>
+                  {LATENCY_STYLE_OPTIONS.map((style) => (
+                    <OptionCard
+                      key={style}
+                      thumb={<LatencyThumb style={style} />}
+                      name={t(`lat.name.${style}` as MessageKey)}
+                      sub={t(`lat.desc.${style}` as MessageKey)}
+                      active={draft.latencyStyle === style}
+                      onPick={() => patch("latencyStyle", style)}
+                    />
+                  ))}
+                </div>
               </InstancePanel>
+              <InstancePanel
+                id="set-card"
+                titleAction={<ScopeBadge kind="site" />}
+                title={t("settings.cardItems")}
+                aside={<Rows3 size={16} />}
+                description={t("settings.cardItemsDesc")}
+              >
+                <div>
+                  <div className="setting-subhead">
+                    <span className="setting-subhead-title">{t("settings.crossView")}</span>
+                    <span className="setting-hint">
+                      {t("settings.crossViewHint")}
+                    </span>
+                  </div>
+                  <div className="mt-2 grid gap-3 md:grid-cols-2">
+                    <ToggleRow
+                      field="showConnections"
+                      title={t("settings.showConnections")}
+                      desc={t("settings.showConnectionsDesc")}
+                      checked={draft.showConnections}
+                      onPatch={patch}
+                    />
+                    <ToggleRow
+                      field="showCardGroup"
+                      title={t("settings.showCardGroup")}
+                      desc={t("settings.showCardGroupDesc")}
+                      checked={draft.showCardGroup}
+                      onPatch={patch}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <div className="setting-subhead">
+                    <span className="setting-subhead-title">{t("settings.compactOnly")}</span>
+                    <span className="setting-hint">
+                      {t("settings.compactOnlyHint")}
+                    </span>
+                  </div>
+                  <div className="mt-2 grid gap-3 md:grid-cols-2">
+                    <ToggleRow
+                      field="compactShowTrafficTotal"
+                      title={t("settings.showTrafficTotal")}
+                      desc={t("settings.showTrafficTotalDesc")}
+                      checked={draft.compactShowTrafficTotal}
+                      onPatch={patch}
+                    />
+                    <ToggleRow
+                      field="compactShowBilling"
+                      title={t("settings.showBilling")}
+                      desc={t("settings.showBillingDesc")}
+                      checked={draft.compactShowBilling}
+                      onPatch={patch}
+                    />
+                    <ToggleRow
+                      field="compactShowUptime"
+                      title={t("settings.showUptime")}
+                      desc={t("settings.showUptimeDesc")}
+                      checked={draft.compactShowUptime}
+                      onPatch={patch}
+                    />
+                  </div>
+                </div>
+              </InstancePanel>
+              <div id="set-ip-stack">
+                <IpStackEditor
+                  settings={draft}
+                  clients={sortedClients}
+                  loading={clientsLoading}
+                  onChange={(updates) => {
+                    editVersionRef.current += 1;
+                    setDraft((previous) => ({ ...previous, ...updates }));
+                  }}
+                />
+              </div>
             </>
           )}
 
@@ -2006,7 +2082,7 @@ export function ThemeManage() {
             <>
               <InstancePanel
                 id="set-home-display"
-                kicker={t("settings.kickerDisplay")}
+                titleAction={<ScopeBadge kind="site" />}
                 title={t("settings.homeDisplay")}
                 aside={<ListFilter size={16} />}
               >
@@ -2026,13 +2102,6 @@ export function ThemeManage() {
                     onPatch={patch}
                   />
                   <ToggleRow
-                    field="showAssetOverview"
-                    title={t("settings.showAssetOverview")}
-                    desc={t("settings.showAssetOverviewDesc")}
-                    checked={draft.showAssetOverview}
-                    onPatch={patch}
-                  />
-                  <ToggleRow
                     field="showGroupTabs"
                     title={t("settings.showGroupTabs")}
                     desc={t("settings.showGroupTabsDesc")}
@@ -2046,27 +2115,12 @@ export function ThemeManage() {
                     checked={draft.showRegionBar}
                     onPatch={patch}
                   />
-                  <ToggleRow
-                    field="showCardGroup"
-                    title={t("settings.showCardGroup")}
-                    desc={t("settings.showCardGroupDesc")}
-                    checked={draft.showCardGroup}
-                    onPatch={patch}
-                  />
-                  <ToggleRow
-                    field="showCardPrice"
-                    title={t("settings.showCardPrice")}
-                    desc={t("settings.showCardPriceDesc")}
-                    checked={draft.showCardPrice}
-                    onPatch={patch}
-                  />
                 </div>
 
               </InstancePanel>
-
               <InstancePanel
                 id="set-home-sort"
-                kicker={t("settings.kickerSort")}
+                titleAction={<ScopeBadge kind="site" />}
                 title={t("settings.sortAndGroup")}
                 aside={<ArrowUpDown size={16} />}
               >
@@ -2238,31 +2292,40 @@ export function ThemeManage() {
                       {t("settings.regionOrderHint")}
                     </span>
                   </div>
-                  <div className="surface-inset mt-2 flex items-center justify-between gap-3 px-4 py-2.5">
-                    <span
-                      className="truncate text-[13px] text-[var(--text-primary)]"
-                      title={draft.homeRegionOrder.join(" → ")}
-                    >
-                      {draft.homeRegionOrder.length > 0
-                        ? draft.homeRegionOrder.join(" → ")
-                        : t("settings.regionOrderDefault")}
+                  <div className="mt-2 flex flex-col gap-2">
+                    {regionChoices.length > 1 ? (
+                      <RegionTabs
+                        regions={regionChoices}
+                        selectedRegion={HOME_ALL_REGION}
+                        onSelectRegion={() => undefined}
+                        onReorder={(visibleAfter) =>
+                          patch(
+                            "homeRegionOrder",
+                            mergeHomeRegionOrder(draft.homeRegionOrder, regionChoices.map((option) => option.code), visibleAfter),
+                          )
+                        }
+                      />
+                    ) : null}
+                    <span className="flex items-center justify-between gap-3">
+                      <span className="setting-hint">
+                        {draft.homeRegionOrder.length > 0 ? t("settings.regionOrderCustom") : t("settings.regionOrderDefault")}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={draft.homeRegionOrder.length === 0}
+                        onClick={() => patch("homeRegionOrder", [])}
+                        className="theme-manage-button is-compact shrink-0"
+                      >
+                        {t("switcher.reset")}
+                      </button>
                     </span>
-                    <button
-                      type="button"
-                      disabled={draft.homeRegionOrder.length === 0}
-                      onClick={() => patch("homeRegionOrder", [])}
-                      className="theme-manage-button is-compact shrink-0"
-                    >
-                      {t("switcher.reset")}
-                    </button>
                   </div>
                 </div>
 
               </InstancePanel>
-
               <InstancePanel
                 id="set-home-ratings"
-                kicker={t("settings.kickerRating")}
+                titleAction={<ScopeBadge kind="site" />}
                 title={t("settings.overviewRating")}
                 aside={<Sparkles size={16} />}
               >
@@ -2317,37 +2380,13 @@ export function ThemeManage() {
                   </div>
                 </div>
               </InstancePanel>
-
-              <InstancePanel
-                id="set-hidden"
-                kicker={t("settings.kickerHidden")}
-                title={t("settings.hiddenNodes")}
-                aside={<EyeOff size={16} />}
-              >
-                <label className="flex min-w-0 flex-col gap-2">
-                  <span className="setting-field-label">
-                    {t("settings.hiddenList")}
-                  </span>
-                  <textarea
-                    value={draft.hiddenNodesText}
-                    onChange={(event) => patch("hiddenNodesText", event.target.value)}
-                    placeholder={t("settings.perLinePlaceholder")}
-                    className="surface-inset min-h-[112px] w-full resize-y px-3 py-2 text-[13px] outline-none"
-                  />
-                  <span className="setting-hint">
-                    {t("settings.hiddenHint", { n: draftHiddenNodes.length })}
-                  </span>
-                </label>
-              </InstancePanel>
-
-              {isOwner ? (
               <InstancePanel
                 id="set-owner-info"
-                kicker={t("settings.kickerOwner")}
+                titleAction={<ScopeBadge kind="owner" />}
                 title={t("settings.ownerInfoTitle")}
                 aside={<Gauge size={16} />}
+                description={t("settings.ownerInfoHint")}
               >
-                <p className="setting-hint mb-3">{t("settings.ownerInfoHint")}</p>
                 <div className="grid gap-3 md:grid-cols-2">
                   <ToggleRow
                     field="showCfUsage"
@@ -2429,214 +2468,50 @@ export function ThemeManage() {
                   </div>
                 ) : null}
               </InstancePanel>
-              ) : null}
-            </>
-          )}
-
-          {activeTab === "card" && (
-            <>
               <InstancePanel
-                id="set-card"
-                kicker={t("settings.kickerCard")}
-                title={t("settings.cardItems")}
-                aside={<Rows3 size={16} />}
+                id="set-quick-controls"
+                titleAction={<ScopeBadge kind="site" />}
+                title={t("settings.quickButtons")}
+                aside={<ToggleRight size={16} />}
               >
-                <div>
-                  <div className="setting-subhead">
-                    <span className="setting-subhead-title">{t("settings.crossView")}</span>
-                    <span className="setting-hint">
-                      {t("settings.crossViewHint")}
-                    </span>
-                  </div>
-                  <div className="mt-2 grid gap-3 md:grid-cols-2">
-                    <ToggleRow
-                      field="showConnections"
-                      title={t("settings.showConnections")}
-                      desc={t("settings.showConnectionsDesc")}
-                      checked={draft.showConnections}
-                      onPatch={patch}
-                    />
-                  </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <ToggleRow
+                    field="quickShowAppearance"
+                    title={t("settings.quickAppearance")}
+                    desc={t("settings.quickAppearanceDesc")}
+                    checked={draft.quickShowAppearance}
+                    onPatch={patch}
+                  />
+                  <ToggleRow
+                    field="quickShowViewMode"
+                    title={t("settings.quickViewMode")}
+                    desc={t("settings.quickViewModeDesc")}
+                    checked={draft.quickShowViewMode}
+                    onPatch={patch}
+                  />
+                  <ToggleRow
+                    field="quickShowColors"
+                    title={t("settings.quickColors")}
+                    desc={t("settings.quickColorsDesc")}
+                    checked={draft.quickShowColors}
+                    onPatch={patch}
+                  />
+                  <ToggleRow
+                    field="quickShowMask"
+                    title={t("settings.quickMask")}
+                    desc={t("settings.quickMaskDesc")}
+                    checked={draft.quickShowMask}
+                    onPatch={patch}
+                  />
+                  <ToggleRow
+                    field="enableAdminButton"
+                    title={t("settings.quickAdmin")}
+                    desc={t("settings.quickAdminDesc")}
+                    checked={draft.enableAdminButton}
+                    onPatch={patch}
+                  />
                 </div>
-
-                <div className="mt-4">
-                  <div className="setting-subhead">
-                    <span className="setting-subhead-title">{t("settings.compactOnly")}</span>
-                    <span className="setting-hint">
-                      {t("settings.compactOnlyHint")}
-                    </span>
-                  </div>
-                  <div className="mt-2 grid gap-3 md:grid-cols-2">
-                    <ToggleRow
-                      field="compactShowTrafficTotal"
-                      title={t("settings.showTrafficTotal")}
-                      desc={t("settings.showTrafficTotalDesc")}
-                      checked={draft.compactShowTrafficTotal}
-                      onPatch={patch}
-                    />
-                    <ToggleRow
-                      field="compactShowBilling"
-                      title={t("settings.showBilling")}
-                      desc={t("settings.showBillingDesc")}
-                      checked={draft.compactShowBilling}
-                      onPatch={patch}
-                    />
-                    <ToggleRow
-                      field="compactShowUptime"
-                      title={t("settings.showUptime")}
-                      desc={t("settings.showUptimeDesc")}
-                      checked={draft.compactShowUptime}
-                      onPatch={patch}
-                    />
-                  </div>
-                </div>
-              </InstancePanel>
-              <IpStackEditor
-                settings={draft}
-                clients={sortedClients}
-                loading={clientsLoading}
-                onChange={(updates) => {
-                  editVersionRef.current += 1;
-                  setDraft((previous) => ({ ...previous, ...updates }));
-                }}
-              />
-            </>
-          )}
-
-          {activeTab === "cost" && (
-            <>
-              <InstancePanel
-                id="set-cost"
-                kicker={t("settings.kickerCost")}
-                title={t("settings.serverCost")}
-                aside={<CircleDollarSign size={16} />}
-              >
-                {/* 和「排序与分组」同一套：开关整行在上，字段两列、标题在上，说明收到最下面一行。 */}
-                <ToggleRow
-                  field="showCostSummary"
-                  title={t("settings.showCostSummary")}
-                  desc={t("settings.showCostSummaryDesc")}
-                  checked={draft.showCostSummary}
-                  onPatch={patch}
-                />
-
-                <div className="setting-grid mt-4">
-                  <div className="min-w-0">
-                    <div className="setting-subhead">
-                      <span className="setting-subhead-title">{t("settings.renewalReminder")}</span>
-                    </div>
-                    <label className="surface-inset setting-control flex items-center gap-2 px-3">
-                      <span className="shrink-0 text-[13px] text-[var(--text-secondary)]">{t("settings.renewalBefore")}</span>
-                      <input
-                        type="number"
-                        min={0}
-                        max={MAX_RENEWAL_REMINDER_DAYS}
-                        step={1}
-                        inputMode="numeric"
-                        value={draft.renewalReminderDays}
-                        onChange={(event) => {
-                          if (event.target.value.trim() === "") return;
-                          const next = Number(event.target.value);
-                          if (!Number.isFinite(next)) return;
-                          patch(
-                            "renewalReminderDays",
-                            Math.min(MAX_RENEWAL_REMINDER_DAYS, Math.max(0, Math.round(next))),
-                          );
-                        }}
-                        aria-label={t("settings.renewalDaysAria")}
-                        className="min-w-0 flex-1 bg-transparent py-2 text-right text-[13px] tabular text-[var(--text-primary)] outline-none"
-                      />
-                      <span className="shrink-0 text-[13px] text-[var(--text-secondary)]">{t("settings.daysUnit")}</span>
-                    </label>
-                  </div>
-                  <div className="min-w-0">
-                    <div className="setting-subhead">
-                      <span className="setting-subhead-title">{t("settings.rateApi")}</span>
-                    </div>
-                    <input
-                      value={draft.costRateApiUrl}
-                      onChange={(event) => patch("costRateApiUrl", event.target.value)}
-                      placeholder={DEFAULT_THEME_SETTINGS.costRateApiUrl}
-                      aria-invalid={draftCostRateApiUrlInvalid}
-                      aria-label={t("settings.rateApi")}
-                      className="surface-inset setting-control px-3 py-2 text-[13px] outline-none"
-                    />
-                    {draftCostRateApiUrlInvalid && (
-                      <span className="mt-2 block text-[12px] text-[var(--status-offline)]">
-                        {t("settings.rateApiInvalid")}
-                      </span>
-                    )}
-                  </div>
-                  <div className="is-wide min-w-0">
-                    <div className="setting-subhead">
-                      <span className="setting-subhead-title">{t("settings.ignoredNodes")}</span>
-                    </div>
-                    <textarea
-                      value={draft.costIgnoredText}
-                      onChange={(event) => patch("costIgnoredText", event.target.value)}
-                      placeholder={t("settings.perLinePlaceholder")}
-                      aria-label={t("settings.ignoredNodes")}
-                      className="surface-inset setting-control block min-h-[88px] resize-y px-3 py-2 text-[13px] outline-none"
-                    />
-                  </div>
-                </div>
-
-                <p className="mt-3 setting-hint">
-                  {t("settings.costHint")}
-                </p>
-              </InstancePanel>
-
-              <InstancePanel
-                id="set-premium"
-                kicker={t("settings.kickerPremium")}
-                title={t("settings.purchasePremium")}
-                aside={<Coins size={16} />}
-              >
-                <div className="flex flex-col gap-3">
-                    <p className="setting-hint">
-                      {t("settings.premiumHint", { n: premiumConfiguredCount })}
-                    </p>
-                    <label className="surface-inset flex items-center gap-2 px-3 py-2">
-                      <Search size={14} className="text-[var(--text-tertiary)]" />
-                      <input
-                        value={premiumSearch}
-                        onChange={(event) => setPremiumSearch(event.target.value)}
-                        placeholder={t("settings.searchNodesPlaceholder")}
-                        aria-label={t("settings.searchNodes")}
-                        className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-[var(--text-tertiary)]"
-                      />
-                    </label>
-
-                    {clientsLoading && (
-                      <div className="flex min-h-[15vh] items-center justify-center">
-                        <Spinner size={24} />
-                      </div>
-                    )}
-
-                    {!clientsLoading && sortedClients.length === 0 && (
-                      <div className="theme-manage-empty-state">
-                        <span>{t("settings.noNodesYet")}</span>
-                      </div>
-                    )}
-
-                    {!clientsLoading && sortedClients.length > 0 && filteredPremiumClients.length === 0 && (
-                      <div className="surface-inset px-4 py-5 text-[13px] text-[var(--text-secondary)]">
-                        {t("settings.noMatchingNodes")}
-                      </div>
-                    )}
-
-                    {!clientsLoading && filteredPremiumClients.length > 0 && (
-                      <PremiumList
-                        clients={filteredPremiumClients}
-                        costPremiums={draft.costPremiums}
-                        detailByUuid={premiumDetailByUuid}
-                        rateLoading={premiumRateQuery.isLoading}
-                        acquiredAtMax={acquiredAtMax}
-                        onPatchPaid={patchPremiumPaid}
-                        onPatchAcquiredAt={patchPremiumAcquiredAt}
-                      />
-                    )}
-                </div>
+                <p className="mt-3 setting-hint">{t("settings.quickHint")}</p>
               </InstancePanel>
             </>
           )}
@@ -2645,7 +2520,7 @@ export function ThemeManage() {
             <>
               <InstancePanel
                 id="set-ping"
-                kicker={t("settings.kickerLines")}
+                titleAction={<ScopeBadge kind="site" />}
                 title={t("settings.homeLatency")}
                 aside={<Activity size={16} />}
               >
@@ -2865,10 +2740,9 @@ export function ThemeManage() {
                   </div>
                 </div>
               </InstancePanel>
-
               <InstancePanel
                 id="set-ping-bindings"
-                kicker={t("settings.kickerBinding")}
+                titleAction={<ScopeBadge kind="site" />}
                 title={t("settings.perNodeLine")}
                 aside={<Network size={16} />}
               >
@@ -2936,21 +2810,249 @@ export function ThemeManage() {
 
                 </div>
               </InstancePanel>
-              <PingDisplayEditor
-                settings={draft}
-                clients={sortedClients}
-                tasks={sortedTasks}
-                loading={clientsLoading}
-                lineOverrides={sourceThemeSettings.homepagePingLineOverrides}
-                localLineOverrides={localLineOverrides}
-                onChange={(updates) => {
-                  editVersionRef.current += 1;
-                  setDraft((previous) => ({ ...previous, ...updates }));
-                }}
-              />
+              <div id="set-ping-display">
+                <PingDisplayEditor
+                  settings={draft}
+                  clients={sortedClients}
+                  tasks={sortedTasks}
+                  loading={clientsLoading}
+                  lineOverrides={sourceThemeSettings.homepagePingLineOverrides}
+                  localLineOverrides={localLineOverrides}
+                  onChange={(updates) => {
+                    editVersionRef.current += 1;
+                    setDraft((previous) => ({ ...previous, ...updates }));
+                  }}
+                />
+              </div>
+            </>
+          )}
+
+          {activeTab === "privacy" && (
+            <>
+              <InstancePanel
+                id="set-screenshot-mask"
+                titleAction={<ScopeBadge kind="site" />}
+                title={t("mask.title")}
+                aside={<EyeOff size={16} />}
+                description={t("mask.panelDesc")}
+              >
+                <ScreenshotMaskSettings
+                  value={draft}
+                  onChange={(updates) => {
+                    editVersionRef.current += 1;
+                    setDraft((previous) => ({ ...previous, ...updates }));
+                  }}
+                />
+              </InstancePanel>
+              <InstancePanel
+                id="set-visitor-costs"
+                titleAction={<ScopeBadge kind="site" />}
+                title={t("settings.visitorCosts")}
+                aside={<Coins size={16} />}
+                description={t("settings.visitorCostsDesc")}
+              >
+                <div className="grid gap-3 md:grid-cols-2">
+                  <ToggleRow
+                    field="showAssetOverview"
+                    title={t("settings.showAssetOverview")}
+                    desc={t("settings.showAssetOverviewDesc")}
+                    checked={draft.showAssetOverview}
+                    onPatch={patch}
+                  />
+                  <ToggleRow
+                    field="showCardPrice"
+                    title={t("settings.showCardPrice")}
+                    desc={t("settings.showCardPriceDesc")}
+                    checked={draft.showCardPrice}
+                    onPatch={patch}
+                  />
+                  <ToggleRow
+                    field="showCostSummary"
+                    title={t("settings.showCostSummary")}
+                    desc={t("settings.showCostSummaryDesc")}
+                    checked={draft.showCostSummary}
+                    onPatch={patch}
+                  />
+                </div>
+              </InstancePanel>
+              <InstancePanel
+                id="set-hidden"
+                titleAction={<ScopeBadge kind="site" />}
+                title={t("settings.hiddenNodes")}
+                aside={<EyeOff size={16} />}
+              >
+                <label className="flex min-w-0 flex-col gap-2">
+                  <span className="setting-field-label">
+                    {t("settings.hiddenList")}
+                  </span>
+                  <textarea
+                    value={draft.hiddenNodesText}
+                    onChange={(event) => patch("hiddenNodesText", event.target.value)}
+                    placeholder={t("settings.perLinePlaceholder")}
+                    className="surface-inset min-h-[112px] w-full resize-y px-3 py-2 text-[13px] outline-none"
+                  />
+                  <span className="setting-hint">
+                    {t("settings.hiddenHint", { n: draftHiddenNodes.length })}
+                  </span>
+                </label>
+              </InstancePanel>
+            </>
+          )}
+
+          {activeTab === "cost" && (
+            <>
+              <InstancePanel
+                id="set-cost"
+                titleAction={<ScopeBadge kind="site" />}
+                title={t("settings.serverCost")}
+                aside={<CircleDollarSign size={16} />}
+              >
+                {/* 和「排序与分组」同一套：开关整行在上，字段两列、标题在上，说明收到最下面一行。 */}
+
+                <div className="setting-grid">
+                  <div className="min-w-0">
+                    <div className="setting-subhead">
+                      <span className="setting-subhead-title">{t("settings.renewalReminder")}</span>
+                    </div>
+                    <label className="surface-inset setting-control flex items-center gap-2 px-3">
+                      <span className="shrink-0 text-[13px] text-[var(--text-secondary)]">{t("settings.renewalBefore")}</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={MAX_RENEWAL_REMINDER_DAYS}
+                        step={1}
+                        inputMode="numeric"
+                        value={draft.renewalReminderDays}
+                        onChange={(event) => {
+                          if (event.target.value.trim() === "") return;
+                          const next = Number(event.target.value);
+                          if (!Number.isFinite(next)) return;
+                          patch(
+                            "renewalReminderDays",
+                            Math.min(MAX_RENEWAL_REMINDER_DAYS, Math.max(0, Math.round(next))),
+                          );
+                        }}
+                        aria-label={t("settings.renewalDaysAria")}
+                        className="min-w-0 flex-1 bg-transparent py-2 text-right text-[13px] tabular text-[var(--text-primary)] outline-none"
+                      />
+                      <span className="shrink-0 text-[13px] text-[var(--text-secondary)]">{t("settings.daysUnit")}</span>
+                    </label>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="setting-subhead">
+                      <span className="setting-subhead-title">{t("settings.rateApi")}</span>
+                    </div>
+                    <input
+                      value={draft.costRateApiUrl}
+                      onChange={(event) => patch("costRateApiUrl", event.target.value)}
+                      placeholder={DEFAULT_THEME_SETTINGS.costRateApiUrl}
+                      aria-invalid={draftCostRateApiUrlInvalid}
+                      aria-label={t("settings.rateApi")}
+                      className="surface-inset setting-control px-3 py-2 text-[13px] outline-none"
+                    />
+                    {draftCostRateApiUrlInvalid && (
+                      <span className="mt-2 block text-[12px] text-[var(--status-offline)]">
+                        {t("settings.rateApiInvalid")}
+                      </span>
+                    )}
+                  </div>
+                  <div className="is-wide min-w-0">
+                    <div className="setting-subhead">
+                      <span className="setting-subhead-title">{t("settings.ignoredNodes")}</span>
+                    </div>
+                    <textarea
+                      value={draft.costIgnoredText}
+                      onChange={(event) => patch("costIgnoredText", event.target.value)}
+                      placeholder={t("settings.perLinePlaceholder")}
+                      aria-label={t("settings.ignoredNodes")}
+                      className="surface-inset setting-control block min-h-[88px] resize-y px-3 py-2 text-[13px] outline-none"
+                    />
+                  </div>
+                </div>
+
+                <p className="mt-3 setting-hint">
+                  {t("settings.costHint")}
+                </p>
+              </InstancePanel>
+              <InstancePanel
+                id="set-premium"
+                titleAction={<ScopeBadge kind="site" />}
+                title={t("settings.purchasePremium")}
+                aside={<Coins size={16} />}
+              >
+                <div className="flex flex-col gap-3">
+                    <p className="setting-hint">
+                      {t("settings.premiumHint", { n: premiumConfiguredCount })}
+                    </p>
+                    <label className="surface-inset flex items-center gap-2 px-3 py-2">
+                      <Search size={14} className="text-[var(--text-tertiary)]" />
+                      <input
+                        value={premiumSearch}
+                        onChange={(event) => setPremiumSearch(event.target.value)}
+                        placeholder={t("settings.searchNodesPlaceholder")}
+                        aria-label={t("settings.searchNodes")}
+                        className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-[var(--text-tertiary)]"
+                      />
+                    </label>
+
+                    {clientsLoading && (
+                      <div className="flex min-h-[15vh] items-center justify-center">
+                        <Spinner size={24} />
+                      </div>
+                    )}
+
+                    {!clientsLoading && sortedClients.length === 0 && (
+                      <div className="theme-manage-empty-state">
+                        <span>{t("settings.noNodesYet")}</span>
+                      </div>
+                    )}
+
+                    {!clientsLoading && sortedClients.length > 0 && filteredPremiumClients.length === 0 && (
+                      <div className="surface-inset px-4 py-5 text-[13px] text-[var(--text-secondary)]">
+                        {t("settings.noMatchingNodes")}
+                      </div>
+                    )}
+
+                    {!clientsLoading && filteredPremiumClients.length > 0 && (
+                      <PremiumList
+                        clients={filteredPremiumClients}
+                        costPremiums={draft.costPremiums}
+                        detailByUuid={premiumDetailByUuid}
+                        rateLoading={premiumRateQuery.isLoading}
+                        acquiredAtMax={acquiredAtMax}
+                        onPatchPaid={patchPremiumPaid}
+                        onPatchAcquiredAt={patchPremiumAcquiredAt}
+                      />
+                    )}
+                </div>
+              </InstancePanel>
+              <InstancePanel
+                id="set-browser-alerts"
+                titleAction={<ScopeBadge kind="device" />}
+                title={t("settings.browserAlertsTitle")}
+                aside={<BellRing size={16} />}
+                description={t("settings.browserAlertsHint")}
+              >
+                <div className="grid gap-3 md:grid-cols-2">
+                  <ToggleRow
+                    field="showOfflineCountInTitle"
+                    title={t("settings.showOfflineCountInTitle")}
+                    desc={t("settings.showOfflineCountInTitleDesc")}
+                    checked={draft.showOfflineCountInTitle}
+                    onPatch={patch}
+                  />
+                  <OfflineNotifyToggle />
+                </div>
+              </InstancePanel>
             </>
           )}
         </div>
+        <SettingsPreview
+          skin={draft.skin}
+          desktopMode={draft.desktopNodeViewMode}
+          mobileMode={draft.mobileNodeViewMode}
+          latencyStyle={draft.latencyStyle}
+        />
       </div>
     </div>
   );

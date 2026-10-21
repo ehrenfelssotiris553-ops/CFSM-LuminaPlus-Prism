@@ -591,6 +591,13 @@ export interface ThemeSettings {
   skinDensity?: string;
   skinNumericFont?: string;
   mySkin?: unknown;
+  /** 六种新布局的延迟画法：auto / capsule / compare / histo / tiles / status / scope。 */
+  latencyStyle?: string;
+  /** 截图打码（站点设置）：打码哪些内容、哪几台、范围、访客也打码。 */
+  screenshotMaskFields?: Record<string, boolean>;
+  screenshotMaskNodes?: string[];
+  screenshotMaskMode?: "only" | "except";
+  screenshotMaskVisitors?: boolean;
 }
 
 /** 图表用的一行历史负载记录，单位与 NodeMetrics 一致。 */

@@ -1,0 +1,330 @@
+/*
+ * 主题设置页专用的样式（只在打开设置页时才下载，首页不带）：影响范围标签、搜索、右侧预览、访客说明。
+ */
+
+/* ------------------------------------------------------------------ *
+ * 主题设置页改版：影响范围标签、搜索、右侧预览、访客说明（SettingsParts）
+ * ------------------------------------------------------------------ */
+
+.scope-badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-500) 12%, transparent);
+  color: var(--accent-500);
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.scope-badge[data-kind="device"] {
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+}
+
+.scope-badge[data-kind="owner"] {
+  background: color-mix(in srgb, #8b5cf6 13%, transparent);
+  color: color-mix(in srgb, #8b5cf6 80%, var(--text-primary));
+}
+
+.scope-badge[data-kind="visitor"] {
+  background: color-mix(in srgb, var(--status-success) 13%, transparent);
+  color: color-mix(in srgb, var(--status-success) 80%, var(--text-primary));
+}
+
+.theme-tab-legend {
+  display: none;
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: calc(12px * var(--radius-scale, 1));
+  background: var(--surface-sunken);
+  color: var(--text-tertiary);
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+
+@media (min-width: 900px) {
+  .theme-tab-legend {
+    display: block;
+  }
+}
+
+/* 搜到的板块闪一下，知道跳到了哪儿。 */
+.instance-panel.is-found,
+.is-found > .instance-panel {
+  box-shadow: 0 0 0 2px var(--accent-500);
+  transition: box-shadow 0.3s ease;
+}
+
+.settings-search {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  height: 34px;
+  flex: 1 1 260px;
+  align-items: center;
+  gap: 8px;
+  max-width: 360px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: calc(10px * var(--radius-scale, 1));
+  background: var(--surface-a);
+  color: var(--text-tertiary);
+}
+
+.settings-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.settings-search-results {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  min-width: 240px;
+  flex-direction: column;
+  gap: 1px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: calc(12px * var(--radius-scale, 1));
+  background: var(--surface-elev);
+  box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.35);
+}
+
+.settings-search-results button {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.settings-search-results button:hover,
+.settings-search-results button:focus-visible {
+  background: var(--hover-bg-a);
+}
+
+.settings-search-results button span,
+.settings-search-empty {
+  color: var(--text-tertiary);
+  font-size: 11.5px;
+}
+
+.settings-search-empty {
+  padding: 8px 10px;
+}
+
+/* 手机上搜索单独一行，放在标题下面。 */
+@media (max-width: 720px) {
+  .settings-search {
+    order: 5;
+    max-width: none;
+    flex-basis: 100%;
+  }
+}
+
+/* 设置页里的选项卡片宽屏多排几列。 */
+.opt-grid.is-settings {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 168px), 1fr));
+}
+
+.opt-card.is-add .opt-thumb {
+  border: 1.5px dashed var(--border);
+  background: none;
+  box-shadow: none;
+}
+
+/* 右边的实时预览：只在够宽的电脑上出现。 */
+.settings-preview {
+  display: none;
+}
+
+@media (min-width: 1280px) {
+  .theme-manage-body {
+    grid-template-columns: 210px minmax(0, 1fr) 272px;
+  }
+
+  .settings-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+.settings-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13.5px;
+}
+
+.settings-preview-switch button {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.settings-preview-frame {
+  display: flex;
+  height: 430px;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+  padding: 12px;
+  border: 6px solid #18181b;
+  border-radius: 22px;
+}
+
+.settings-preview-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.settings-preview-top i:first-child {
+  width: 64px;
+  height: 8px;
+  border-radius: 4px;
+}
+
+.settings-preview-top i:last-child {
+  width: 44px;
+  height: 14px;
+  border-radius: 999px;
+}
+
+.settings-preview-tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.settings-preview-tiles > span {
+  display: flex;
+  height: 36px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 8px;
+  border: 1px solid;
+}
+
+.settings-preview-tiles i,
+.settings-preview-line i {
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.settings-preview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid;
+}
+
+.settings-preview-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-preview-line i {
+  height: 7px;
+}
+
+.settings-preview-glyph {
+  display: grid;
+  height: 54px;
+  place-items: center;
+  border-radius: 8px;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.settings-preview-glyph.is-small {
+  height: 40px;
+}
+
+.settings-preview-glyph .opt-thumb {
+  width: auto;
+  height: auto;
+  background: none;
+  box-shadow: none;
+  color: inherit;
+  transform: scale(1.4);
+}
+
+.settings-preview-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.settings-preview-tags > span {
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-a);
+  color: var(--text-secondary);
+  font-size: 11.5px;
+}
+
+/* 访客打开设置页 */
+.owner-only-notice {
+  display: flex;
+  max-width: 440px;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin: 10vh auto 0;
+  padding: 28px 24px;
+  border: 1px solid var(--border);
+  border-radius: calc(18px * var(--radius-scale, 1));
+  background: var(--surface-a);
+  text-align: center;
+}
+
+.owner-only-notice p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.owner-only-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent-500) 12%, transparent);
+  color: var(--accent-500);
+}
+
+.owner-only-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}

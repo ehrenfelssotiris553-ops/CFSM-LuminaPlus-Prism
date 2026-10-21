@@ -3,8 +3,8 @@ import { pickPaletteSettings } from "@/hooks/useMetricColors";
 import { useAllPingLineOverrides } from "@/hooks/usePingOverview";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { useLocalThemeSettings } from "@/hooks/useThemeSettings";
-import { getPublic, resolveMe, saveThemeOptions } from "@/services/api";
-import { getJwtToken } from "@/services/cfsm/config";
+import { getPublic, saveThemeOptions } from "@/services/api";
+import { canSyncSiteTheme } from "@/services/siteOwner";
 import {
   clearPingLineOverrides,
   getAllPingLineOverrides,
@@ -177,22 +177,7 @@ function readSyncPending(): boolean {
   }
 }
 
-/**
- * 这台设备的改动要不要自动同步到后端：站点配置（`authorization`）判成已登录；有令牌时 config 还没到也先算可以。
- * 光看令牌不够：令牌过期的老访客每改一次颜色都会撞一次 401。没令牌但后端认 Cookie 的站长也能同步（见 resolveMe）。
- */
-export function canSyncSiteTheme(): boolean {
-  const me = resolveMe(queryClient.getQueryData<PublicConfig>(["public"]));
-  return getJwtToken() ? me?.logged_in !== false : me?.logged_in === true;
-}
-
-/** 设置页、取色器判断「登录站长」用，与自动同步同口径；随登录校验结果更新。 */
-export function useCanSyncSiteTheme(): boolean {
-  return useSyncExternalStore(
-    (listener) => queryClient.getQueryCache().subscribe(listener),
-    canSyncSiteTheme,
-  );
-}
+export { canSyncSiteTheme, useCanSyncSiteTheme } from "@/services/siteOwner";
 
 function scheduleSync(delayMs: number) {
   if (syncTimer !== undefined) clearTimeout(syncTimer);

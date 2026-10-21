@@ -20,6 +20,7 @@ import {
   type MetricColorKey,
 } from "@/hooks/useMetricColors";
 import { useCanSyncSiteTheme } from "@/hooks/useSiteThemeOptions";
+import { useThemeSettings } from "@/hooks/useThemeSettings";
 
 const DARK_DEPTH_PRESETS = [
   { value: 0, labelKey: "colors.depthGray", titleKey: "colors.depthGrayTitle" },
@@ -41,8 +42,14 @@ const ICONS: Record<MetricColorKey, typeof Cpu> = {
   trafficDown: ArrowDown,
 };
 
-export function MetricColorPicker({ hidden = false }: { hidden?: boolean }) {
+/**
+ * 指标配色和深色背景深浅。`embedded`：放在首页「风格」面板的折叠区里（不要自己的边框和标题栏底色）。
+ * 深色深浅只对「流光」有用（其它风格的深色是配好的），换了风格就灰掉。
+ */
+export function MetricColorPicker({ hidden = false, embedded = false }: { hidden?: boolean; embedded?: boolean }) {
   const syncsToSite = useCanSyncSiteTheme();
+  const { skin } = useThemeSettings();
+  const depthLocked = skin !== "lumina";
   const {
     colors,
     darkDepth,
@@ -69,7 +76,7 @@ export function MetricColorPicker({ hidden = false }: { hidden?: boolean }) {
   );
   return (
     <div
-      className="metric-color-picker"
+      className={embedded ? "metric-color-picker is-embedded" : "metric-color-picker"}
       role="group"
       aria-label={t("quick.cardColors")}
       hidden={hidden}
@@ -94,7 +101,7 @@ export function MetricColorPicker({ hidden = false }: { hidden?: boolean }) {
       {saveError && <div className="metric-color-error">{t("colors.saveError")}</div>}
       <div className="metric-color-group">
         <div className="metric-color-group-title">{t("colors.darkBackground")}</div>
-        <div className="dark-depth-control">
+        <fieldset className="dark-depth-control" disabled={depthLocked} data-locked={depthLocked ? "" : undefined}>
           <div className="dark-depth-presets" role="group" aria-label={t("colors.depthPresets")}>
             {DARK_DEPTH_PRESETS.map((preset) => (
               <button
@@ -127,10 +134,12 @@ export function MetricColorPicker({ hidden = false }: { hidden?: boolean }) {
               onChange={(event) => setDarkDepth(Number(event.target.value))}
             />
           </label>
-          {resolvedAppearance !== "dark" && (
+          {depthLocked ? (
+            <p className="dark-depth-hint">{t("colors.depthLumina")}</p>
+          ) : resolvedAppearance !== "dark" ? (
             <p className="dark-depth-hint">{t("colors.darkHint")}</p>
-          )}
-        </div>
+          ) : null}
+        </fieldset>
       </div>
       {METRIC_COLOR_GROUPS.map((group) => (
         <div className="metric-color-group" key={group.id}>

@@ -32,6 +32,15 @@ import {
   type CostPremiumEntry,
 } from "@/utils/cost";
 import { normalizeNodeIdentityList } from "@/utils/nodeIdentity";
+import { normalizeLatencyStyle, type LatencyStyleSetting } from "@/utils/layouts";
+import {
+  DEFAULT_MASK_FIELDS,
+  normalizeMaskFields,
+  normalizeMaskMode,
+  normalizeMaskNodes,
+  type MaskFields,
+  type MaskMode,
+} from "@/utils/screenshotMask";
 import {
   DEFAULT_CF_USAGE_REFRESH_MINUTES,
   normalizeCfUsageRefreshMinutes,
@@ -141,6 +150,8 @@ export interface ResolvedThemeSettings {
   defaultAppearance: Appearance;
   desktopNodeViewMode: NodeViewMode;
   mobileNodeViewMode: NodeViewMode;
+  /** 六种新布局的延迟画法；auto = 每种布局用自己配的（见 utils/layouts）。 */
+  latencyStyle: LatencyStyleSetting;
   enableAdminButton: boolean;
   quickShowAppearance: boolean;
   quickShowViewMode: boolean;
@@ -219,12 +230,18 @@ export interface ResolvedThemeSettings {
   skinNumericFont: SkinNumericFont;
   /** 「另存为我的风格」存下的一套；没存过是 null。 */
   mySkin: SkinStyle | null;
+  /** 截图打码：打码哪些内容、哪几台、范围、访客要不要也打码（见 utils/screenshotMask）。 */
+  screenshotMaskFields: MaskFields;
+  screenshotMaskNodes: string[];
+  screenshotMaskMode: MaskMode;
+  screenshotMaskVisitors: boolean;
 }
 
 export const DEFAULT_THEME_SETTINGS: ResolvedThemeSettings = {
   defaultAppearance: "system",
   desktopNodeViewMode: "large",
   mobileNodeViewMode: "compact",
+  latencyStyle: "auto",
   enableAdminButton: true,
   quickShowAppearance: true,
   quickShowViewMode: true,
@@ -291,6 +308,10 @@ export const DEFAULT_THEME_SETTINGS: ResolvedThemeSettings = {
   skinDensity: DEFAULT_SKIN_STYLE.density,
   skinNumericFont: DEFAULT_SKIN_STYLE.numericFont,
   mySkin: null,
+  screenshotMaskFields: DEFAULT_MASK_FIELDS,
+  screenshotMaskNodes: [],
+  screenshotMaskMode: "except",
+  screenshotMaskVisitors: false,
 };
 
 /** 首页默认分组：只收非空字符串，长度掐在合理范围内（分组名来自后端）。 */
@@ -402,6 +423,7 @@ export function normalizeThemeSettings(
       settings?.mobileNodeViewMode,
       DEFAULT_THEME_SETTINGS.mobileNodeViewMode,
     ),
+    latencyStyle: normalizeLatencyStyle(settings?.latencyStyle),
     enableAdminButton: enabledUnlessFalse(settings?.enableAdminButton),
     quickShowAppearance: enabledUnlessFalse(settings?.quickShowAppearance),
     quickShowViewMode: enabledUnlessFalse(settings?.quickShowViewMode),
@@ -482,5 +504,9 @@ export function normalizeThemeSettings(
     skinDensity: normalizeSkinDensity(settings?.skinDensity),
     skinNumericFont: normalizeSkinNumericFont(settings?.skinNumericFont),
     mySkin: normalizeMySkin(settings?.mySkin),
+    screenshotMaskFields: normalizeMaskFields(settings?.screenshotMaskFields),
+    screenshotMaskNodes: normalizeMaskNodes(settings?.screenshotMaskNodes),
+    screenshotMaskMode: normalizeMaskMode(settings?.screenshotMaskMode),
+    screenshotMaskVisitors: settings?.screenshotMaskVisitors === true,
   };
 }

@@ -1,5 +1,5 @@
 import { t, type MessageKey } from "@/i18n";
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertTriangle, ChevronLeft, ChevronRight, Monitor, Palette, Settings, SlidersHorizontal, Sun, Moon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { usePreferences } from "@/hooks/usePreferences";
@@ -8,17 +8,14 @@ import { useNodeStoreStatus } from "@/hooks/useNode";
 import { useAuth } from "@/hooks/useAuth";
 import { useThemeSettings } from "@/hooks/useThemeSettings";
 import { useScreenshotMask } from "@/hooks/useScreenshotMask";
+import { useCanSyncSiteTheme } from "@/services/siteOwner";
 import { MaskIcon } from "@/components/node/MaskPicker";
 import { LayoutIcon } from "@/components/node/LayoutIcon";
-import { ViewModeMenu } from "./ViewModeMenu";
+import { LayoutMenu, StyleMenu } from "./QuickMenus";
 import { toggleScreenshotMask } from "@/utils/screenshotMask";
 import { getAdminUrl } from "@/services/cfsm/config";
 import { readQuickControlsExpanded, writeQuickControlsExpanded } from "@/utils/quickControlsStorage";
 import { clsx } from "clsx";
-
-const MetricColorPicker = lazy(() =>
-  import("./MetricColorPicker").then((module) => ({ default: module.MetricColorPicker })),
-);
 
 const APPEARANCE_OPTIONS = [
   { value: "light", icon: Sun, labelKey: "appearance.light" },
@@ -26,6 +23,15 @@ const APPEARANCE_OPTIONS = [
   { value: "dark", icon: Moon, labelKey: "appearance.dark" },
 ] as const;
 
+type OpenMenu = "layout" | "style" | null;
+
+/**
+ * 首页右上角的快捷栏。
+ * - 所有人：浅色 / 跟随系统 / 深色（只影响自己这台设备）、后台入口。
+ * - 登录站长另外有：布局、风格（弹出面板，改的是全站默认，随后自动同步到后端）、截图打码、主题设置。
+ *   访客改不了布局和配色，这几个按钮不给访客看（主题设置页对访客也只是一句说明）。
+ * 哪些按钮显示由「设置 → 首页 → 首页快捷按钮」决定；主题设置按钮不让关，否则关光了就回不到设置页。
+ */
 export function FloatingControls({
   onExpandedChange,
 }: {
@@ -34,47 +40,39 @@ export function FloatingControls({
   const { appearance, setAppearance } = usePreferences();
   const { mode, device, setMode } = useViewMode();
   const { data: me } = useAuth();
+  const isOwner = useCanSyncSiteTheme();
   const themeSettings = useThemeSettings();
   const { failureStreak } = useNodeStoreStatus();
   // 上次展开着就接着展开（只在宽屏上，见 quickControlsStorage）。
   const [collapsed, setCollapsed] = useState(() => !readQuickControlsExpanded());
-  const [colorsOpen, setColorsOpen] = useState(false);
-  const [colorsMounted, setColorsMounted] = useState(false);
-  // 卡片视图的弹出菜单（十种布局，点哪个切哪个）。
-  const [viewMenuOpen, setViewMenuOpen] = useState(false);
-  const viewButtonRef = useRef<HTMLButtonElement>(null);
-  const closeViewMenu = useCallback(() => setViewMenuOpen(false), []);
+  const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
+  const layoutButtonRef = useRef<HTMLButtonElement>(null);
+  const styleButtonRef = useRef<HTMLButtonElement>(null);
+  const closeMenu = useCallback(() => setOpenMenu(null), []);
   const settingsReady = themeSettings.isReady;
   const showAdmin = settingsReady && themeSettings.enableAdminButton;
-  // 主题设置与配色都只保存在本机浏览器（第三方主题不能写后端配置），
-  // 因此对所有访客开放，各自调各自的。
-  // 哪些按钮显示由「设置 → 外观 → 快捷栏」决定；主题设置按钮不让关，否则关光了就回不到设置页。
-  const showThemeManage = settingsReady;
+  const showThemeManage = settingsReady && isOwner;
   const showAppearance = settingsReady && themeSettings.quickShowAppearance;
-  const showViewMode = settingsReady && themeSettings.quickShowViewMode;
-  const showColorPicker = settingsReady && themeSettings.quickShowColors;
-  const showMask = settingsReady && themeSettings.quickShowMask;
+  const showViewMode = settingsReady && isOwner && themeSettings.quickShowViewMode;
+  const showStyle = settingsReady && isOwner && themeSettings.quickShowColors;
+  const showMask = settingsReady && isOwner && themeSettings.quickShowMask;
   const mask = useScreenshotMask();
   const showSyncWarning = failureStreak >= 2;
   const hiddenTabIndex = collapsed ? -1 : undefined;
   const ToggleIcon = collapsed ? ChevronLeft : ChevronRight;
-  // 只要不在最宽松的大卡默认态,就视为"已切换"，按钮保持高亮。
-  const isReducedView = mode !== "large";
   useEffect(() => {
     onExpandedChange?.(!collapsed);
   }, [collapsed, onExpandedChange]);
   useEffect(() => () => onExpandedChange?.(false), [onExpandedChange]);
 
   const toggleControls = () => {
-    // 收起快捷栏时同时结束子面板状态，避免下次展开时调色盘自动复现。
+    // 收起快捷栏时同时关掉弹出面板，避免下次展开时自动冒出来。
     const nextCollapsed = !collapsed;
-    if (nextCollapsed) {
-      setColorsOpen(false);
-      setViewMenuOpen(false);
-    }
+    if (nextCollapsed) setOpenMenu(null);
     setCollapsed(nextCollapsed);
     writeQuickControlsExpanded(!nextCollapsed);
   };
+  const toggleMenu = (menu: Exclude<OpenMenu, null>) => setOpenMenu((value) => (value === menu ? null : menu));
 
   return (
     <div
@@ -114,40 +112,35 @@ export function FloatingControls({
             )}
             {showViewMode && (
               <button
-                ref={viewButtonRef}
+                ref={layoutButtonRef}
                 type="button"
-                onClick={() => {
-                  setColorsOpen(false);
-                  setViewMenuOpen((value) => !value);
-                }}
+                onClick={() => toggleMenu("layout")}
                 aria-label={t("quick.switchView")}
-                aria-haspopup="menu"
-                aria-expanded={viewMenuOpen}
+                aria-haspopup="dialog"
+                aria-expanded={openMenu === "layout"}
                 title={t("quick.currentView", { view: t(`viewMode.${mode}` as MessageKey) })}
                 tabIndex={hiddenTabIndex}
                 className={clsx(
                   "control-button grid h-9 w-9 place-items-center",
-                  (isReducedView || viewMenuOpen) && "control-toggle is-active",
+                  openMenu === "layout" && "control-toggle is-active",
                 )}
               >
                 <LayoutIcon mode={mode} size={16} />
               </button>
             )}
-            {showColorPicker && (
+            {showStyle && (
               <button
+                ref={styleButtonRef}
                 type="button"
-                onClick={() => {
-                  setColorsMounted(true);
-                  setViewMenuOpen(false);
-                  setColorsOpen((value) => !value);
-                }}
-                aria-label={t("quick.cardColors")}
-                aria-pressed={colorsOpen}
-                title={t("quick.cardColors")}
+                onClick={() => toggleMenu("style")}
+                aria-label={t("quick.styleMenu")}
+                aria-haspopup="dialog"
+                aria-expanded={openMenu === "style"}
+                title={t("quick.styleMenu")}
                 tabIndex={hiddenTabIndex}
                 className={clsx(
                   "control-button grid h-9 w-9 place-items-center",
-                  colorsOpen && "control-toggle is-active",
+                  openMenu === "style" && "control-toggle is-active",
                 )}
               >
                 <Palette size={16} />
@@ -206,24 +199,20 @@ export function FloatingControls({
             )}
           </button>
         </div>
-        {showViewMode && viewMenuOpen && !collapsed && (
-          <ViewModeMenu
+        {showViewMode && openMenu === "layout" && !collapsed && (
+          <LayoutMenu
             current={mode}
             device={device}
-            anchorRef={viewButtonRef}
-            onClose={closeViewMenu}
+            anchorRef={layoutButtonRef}
+            onClose={closeMenu}
             onPick={(next) => {
               setMode(next);
-              setViewMenuOpen(false);
+              setOpenMenu(null);
             }}
           />
         )}
-        {showColorPicker && colorsMounted && (
-          <Suspense fallback={null}>
-            <MetricColorPicker hidden={collapsed || !colorsOpen} />
-          </Suspense>
-        )}
-        {showSyncWarning && !collapsed && !colorsOpen && !viewMenuOpen && (
+        {showStyle && openMenu === "style" && !collapsed && <StyleMenu anchorRef={styleButtonRef} onClose={closeMenu} />}
+        {showSyncWarning && !collapsed && openMenu === null && (
           <div className="floating-controls-sync-warning pointer-events-none flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--status-offline)_32%,transparent)] bg-[color-mix(in_srgb,var(--surface-a)_90%,transparent)] px-3 py-1 text-[11px] font-medium text-[var(--status-offline)] shadow-[0_10px_25px_-18px_rgba(0,0,0,0.8)] backdrop-blur">
             <AlertTriangle size={12} />
             <span>{t("quick.syncWarning")}</span>
