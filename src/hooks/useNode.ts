@@ -17,8 +17,10 @@ import {
   subscribeToNodeTrafficTrend,
   getStoreStatusSnapshot,
   getSysConfigSnapshot,
+  getSiteBillingVisibilitySnapshot,
   subscribeSysConfig,
   type HomeNodeSummary,
+  type SiteBillingVisibility,
   type NodeOnlineSummary,
 } from "@/services/wsStore";
 import type { NodeInfo, NodeMetrics, TrafficTrendSample } from "@/types/cfsm";
@@ -135,6 +137,16 @@ export function useShowThreeNetDetails(): boolean {
   useEnsured();
   const getSnapshot = useCallback(() => getSysConfigSnapshot().show_three_net_details, []);
   return useSyncExternalStore(subscribeSysConfig, getSnapshot, getSnapshot);
+}
+
+
+/**
+ * 后台「显示价格」「显示到期」两个开关（见 wsStore 的 SiteBillingVisibility）。节点信息里的价格、到期日已经按它抹掉了，
+ * 这里给卡片用来把整行收起来（不然会显示成「免费」或「—」）。没拿到全站列表之前 known 是 false，两个都当作不显示。
+ */
+export function useSiteBillingSwitches(): SiteBillingVisibility {
+  useEnsured();
+  return useSyncExternalStore(subscribeSysConfig, getSiteBillingVisibilitySnapshot, getSiteBillingVisibilitySnapshot);
 }
 
 export function useNodeStoreStatus(enabled = true) {

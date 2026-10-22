@@ -10,6 +10,7 @@ import {
   useHomeNodeSummaries,
   useNodeOnlineSummaries,
   useNodeStoreStatus,
+  useSiteBillingSwitches,
 } from "@/hooks/useNode";
 import { useHomepagePingOverview } from "@/hooks/usePingOverview";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
@@ -489,9 +490,12 @@ export function NodeGrid() {
   const themeSettings = useThemeSettings();
   const { mode, device } = useViewMode();
   const sort = useHomeSort();
+  // 后台关了「显示价格」：价格已经抹掉，资产（就是价格加起来）、价格排序也都不出现。
+  const siteBilling = useSiteBillingSwitches();
   // enableHomeSort 控制访客能否改排序;关闭时无视 session 覆盖、直接用管理员默认序(默认仍是 weight)。
   const sortEnabled = themeSettings.isReady && themeSettings.enableHomeSort;
-  const sortField = sortEnabled ? sort.field : themeSettings.homeSortField;
+  const chosenSortField = sortEnabled ? sort.field : themeSettings.homeSortField;
+  const sortField = chosenSortField === "price" && !siteBilling.price ? "default" : chosenSortField;
   const sortDirection = sortEnabled ? sort.direction : themeSettings.homeSortDirection;
   const [selectedGroup, setSelectedGroup] = useState(HOME_ALL_GROUP);
   const [selectedRegion, setSelectedRegion] = useState(HOME_ALL_REGION);
@@ -579,9 +583,9 @@ export function NodeGrid() {
   const showHomeOverview = themeSettings.isReady && themeSettings.showHomeOverview;
   const hasNodes = visibleMeta.length > 0;
   // 「资产概览」把每月花多少钱亮给所有访客，单独一个开关，不跟着整排总览走。
-  const showAssetCard = showHomeOverview && hasNodes && themeSettings.showAssetOverview;
+  const showAssetCard = showHomeOverview && hasNodes && themeSettings.showAssetOverview && siteBilling.price;
   // 资产页入口只有一个开关：资产卡在就放卡内按钮，不在就用悬浮按钮，两个位置互斥。
-  const showCostEntry = themeSettings.isReady && themeSettings.showCostSummary && hasNodes;
+  const showCostEntry = themeSettings.isReady && themeSettings.showCostSummary && hasNodes && siteBilling.price;
   const showCostDetailButton = showCostEntry && showAssetCard;
   const showCostFloatingButton = showCostEntry && !showAssetCard;
 
@@ -941,6 +945,7 @@ export function NodeGrid() {
         selectedStack={selectedStack}
         onSelectStack={setSelectedStack}
         sort={showHomeSort ? sort : null}
+        hidePriceSort={!siteBilling.price}
         scopeOffline={scopeOffline}
       />
       {isList ? <NodeListView uuids={orderedUuids} /> : gridElement}

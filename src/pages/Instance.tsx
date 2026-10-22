@@ -1,9 +1,9 @@
 import { t } from "@/i18n";
-import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 import "uplot/dist/uPlot.min.css";
-import { InstanceDetails } from "@/components/instance/InstanceDetails";
+import { InstanceOverview } from "@/components/instance/InstanceOverview";
 import { PingChart } from "@/components/instance/PingChart";
 import { LoadChart } from "@/components/instance/LoadChart";
 import { Spinner } from "@/components/ui/Spinner";
@@ -59,7 +59,6 @@ export function Instance() {
   const [chartType, setChartType] = useState<"load" | "ping">("load");
   const [loadHours, setLoadHours] = useState(0);
   const [pingHours, setPingHours] = useState(DEFAULT_PING_HOURS);
-  const chartControlsRef = useRef<HTMLDivElement | null>(null);
 
   // 后端最长支持 7 天；未登录访客查询超过 24 小时会被拒绝，所以直接不显示更长的档位。
   const maxHistoryHours = me?.logged_in
@@ -75,17 +74,6 @@ export function Instance() {
     [maxHistoryHours],
   );
   const showPingChart = themeSettings.isReady && themeSettings.showPingChart;
-
-  const alignCharts = useCallback(() => {
-    const frame = window.requestAnimationFrame(() => {
-      const element = chartControlsRef.current;
-      if (!element) return;
-      const rect = element.getBoundingClientRect();
-      if (rect.top >= 0 && rect.top < window.innerHeight) return;
-      element.scrollIntoView({ behavior: "auto", block: "start" });
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, []);
 
   useEffect(() => {
     if (!loadRanges.some((range) => range.value === loadHours)) {
@@ -139,78 +127,74 @@ export function Instance() {
     );
   }
 
+  // 原来打开详情页会自动滚到图表；改版后最上面是体检结论，从顶上开始看。
+  // 图表作为 children 传进去：上面几块随实时推送刷新时，图表这棵子树引用不变，不跟着重渲染。
   return (
-    <div className="flex flex-col gap-5 py-2">
-      <Link
-        to="/"
-        className="instance-page-back"
-      >
-        <ChevronLeft size={14} />
-        {t("common.back")}
-      </Link>
-      <InstanceDetails uuid={uuid} onNodeReady={alignCharts} />
-      <div ref={chartControlsRef} className="instance-chart-controls">
-        <div className="instance-segmented">
-          <button
-            type="button"
-            data-active={chartType === "load" ? "true" : "false"}
-            aria-pressed={chartType === "load"}
-            onClick={() => {
-              startTransition(() => setChartType("load"));
-            }}
-          >
-            {t("instance.tabLoad")}
-          </button>
-          {showPingChart && (
+    <div className="py-2">
+      <InstanceOverview uuid={uuid}>
+        <div className="instance-chart-controls">
+          <div className="instance-segmented">
             <button
               type="button"
-              data-active={chartType === "ping" ? "true" : "false"}
-              aria-pressed={chartType === "ping"}
+              data-active={chartType === "load" ? "true" : "false"}
+              aria-pressed={chartType === "load"}
               onClick={() => {
-                startTransition(() => setChartType("ping"));
+                startTransition(() => setChartType("load"));
               }}
             >
-              Ping
+              {t("instance.tabLoad")}
             </button>
+            {showPingChart && (
+              <button
+                type="button"
+                data-active={chartType === "ping" ? "true" : "false"}
+                aria-pressed={chartType === "ping"}
+                onClick={() => {
+                  startTransition(() => setChartType("ping"));
+                }}
+              >
+                Ping
+              </button>
+            )}
+          </div>
+          {chartType === "load" && (
+            <RangeSelector
+              ranges={loadRanges}
+              value={loadHours}
+              onChange={(value) => startTransition(() => setLoadHours(value))}
+            />
+          )}
+          {chartType === "ping" && showPingChart && (
+            <RangeSelector
+              ranges={pingRanges}
+              value={pingHours}
+              onChange={(value) => startTransition(() => setPingHours(value))}
+            />
           )}
         </div>
-        {chartType === "load" && (
-          <RangeSelector
-            ranges={loadRanges}
-            value={loadHours}
-            onChange={(value) => startTransition(() => setLoadHours(value))}
-          />
-        )}
-        {chartType === "ping" && showPingChart && (
-          <RangeSelector
-            ranges={pingRanges}
-            value={pingHours}
-            onChange={(value) => startTransition(() => setPingHours(value))}
-          />
-        )}
-      </div>
-      <div className="instance-chart-stage">
-        <div
-          className="instance-chart-view"
-          hidden={chartType !== "load"}
-          aria-hidden={chartType !== "load"}
-        >
-          <LoadChart uuid={uuid} hours={loadHours} active={chartType === "load"} />
+        <div className="instance-chart-stage">
+          <div
+            className="instance-chart-view"
+            hidden={chartType !== "load"}
+            aria-hidden={chartType !== "load"}
+          >
+            <LoadChart uuid={uuid} hours={loadHours} active={chartType === "load"} />
+          </div>
+          <div
+            className="instance-chart-view"
+            hidden={chartType !== "ping"}
+            aria-hidden={chartType !== "ping"}
+          >
+            {showPingChart ? (
+              <PingChart
+                uuid={uuid}
+                hours={pingHours}
+                active={chartType === "ping"}
+              />
+            ) : null}
+          </div>
         </div>
-        <div
-          className="instance-chart-view"
-          hidden={chartType !== "ping"}
-          aria-hidden={chartType !== "ping"}
-        >
-          {showPingChart ? (
-            <PingChart
-              uuid={uuid}
-              hours={pingHours}
-              active={chartType === "ping"}
-            />
-          ) : null}
-        </div>
-      </div>
+      </InstanceOverview>
     </div>
   );
 }

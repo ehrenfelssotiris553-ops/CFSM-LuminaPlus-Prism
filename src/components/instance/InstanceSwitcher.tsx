@@ -15,18 +15,13 @@ import { useAllNodeMeta, useHomeNodeSummaries } from "@/hooks/useNode";
 import { useThemeSettings } from "@/hooks/useThemeSettings";
 import { collectMatchingNodeUuids } from "@/utils/nodeIdentity";
 
-export function InstanceSwitcher({ currentUuid }: { currentUuid: string }) {
+/** 能切过去的机器（首页隐藏的不算、访客看不到后台隐藏的），名字已打码；切换菜单和上一台 / 下一台共用。 */
+export function useSwitchableNodes() {
   const allMeta = useAllNodeMeta();
   const summaries = useHomeNodeSummaries();
   const { hiddenNodes } = useThemeSettings();
   const { data: me } = useAuth();
   const mask = useMaskLookup();
-  const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
-  const listId = useId();
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const listRef = useRef<HTMLDivElement | null>(null);
-  const triggerRef = useRef<HTMLButtonElement | null>(null);
 
   const onlineByUuid = useMemo(
     () => new Map(summaries.map((node) => [node.uuid, node.online] as const)),
@@ -51,6 +46,18 @@ export function InstanceSwitcher({ currentUuid }: { currentUuid: string }) {
         })),
     [allMeta, hiddenUuids, me?.logged_in, onlineByUuid, mask],
   );
+  return nodes;
+}
+
+/** `label` 有值时按钮上写字（详情页顶栏的「切换机器 ▾」），没有就只是一个小箭头。 */
+export function InstanceSwitcher({ currentUuid, label }: { currentUuid: string; label?: string }) {
+  const nodes = useSwitchableNodes();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const listId = useId();
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -120,6 +127,7 @@ export function InstanceSwitcher({ currentUuid }: { currentUuid: string }) {
         type="button"
         ref={triggerRef}
         className="instance-switcher-trigger"
+        data-labelled={label ? "" : undefined}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listId}
@@ -133,6 +141,7 @@ export function InstanceSwitcher({ currentUuid }: { currentUuid: string }) {
           }
         }}
       >
+        {label ? <span>{label}</span> : null}
         {open ? <ChevronUp size={14} aria-hidden /> : <ChevronDown size={14} aria-hidden />}
       </button>
       {open && (

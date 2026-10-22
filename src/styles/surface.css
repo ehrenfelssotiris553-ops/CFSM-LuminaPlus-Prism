@@ -1716,153 +1716,11 @@ body::after {
   letter-spacing: 0.02em;
 }
 
-.instance-info-groups {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.instance-info-group {
-  min-width: 0;
-  border: 1px solid var(--border-subtle);
-  border-radius: calc(16px * var(--radius-scale, 1));
-  background: color-mix(in srgb, var(--surface-elev) 92%, transparent);
-  padding: 9px 12px;
-}
-
-.instance-info-group-title {
-  margin-bottom: 6px;
-  color: var(--text-primary);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.instance-info-item {
-  min-width: 0;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 4px 0;
-  border-bottom: 1px solid var(--hairline);
-}
-
-.instance-info-item:last-child {
-  border-bottom: 0;
-}
-
-.instance-info-label {
-  flex: 0 0 auto;
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-}
-
-.instance-info-value {
-  min-width: 0;
-  text-align: right;
-  color: var(--text-primary);
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1.3;
-  word-break: break-word;
-}
-
-.instance-info-label-inline {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-
-/* 「估算」等小角标：弱化的胶囊，提示该值非精确数据（如今日流量按瞬时速率积分得出）。 */
-.instance-info-tag {
-  flex: 0 0 auto;
-  padding: 1px 5px;
-  border-radius: 999px;
-  background: var(--surface-muted, rgba(127, 127, 127, 0.14));
-  color: var(--text-tertiary);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  cursor: help;
-}
-
-.instance-info-inline-value {
-  display: inline-flex;
-  min-width: 0;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
-.instance-info-refresh {
-  display: inline-grid;
-  width: 22px;
-  height: 22px;
-  flex: 0 0 auto;
-  place-items: center;
-  border: 0;
-  border-radius: calc(6px * var(--radius-scale, 1));
-  background: transparent;
-  color: var(--text-tertiary);
-  transition:
-    background 160ms ease,
-    color 160ms ease;
-}
-
-.instance-info-refresh:hover {
-  background: var(--hover-bg);
-  color: var(--text-primary);
-}
-
-.instance-info-refresh:disabled {
-  cursor: default;
-  opacity: 0.65;
-}
-
-.instance-info-refresh.is-spinning svg {
-  animation: instance-info-refresh-spin 900ms linear infinite;
-}
-
+/* 旋转动画名是历史遗留，首页站长用量的刷新按钮（home.css）在用。 */
 @keyframes instance-info-refresh-spin {
   to {
     transform: rotate(360deg);
   }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .instance-info-refresh.is-spinning svg {
-    animation: none;
-  }
-}
-
-/* 流量项带进度条，保留竖排 */
-.instance-info-item.is-stack {
-  display: block;
-}
-
-.instance-info-item.is-stack .instance-info-label {
-  display: block;
-  margin-bottom: 3px;
-}
-
-.instance-info-item.is-stack .instance-info-value {
-  text-align: left;
-  margin-bottom: 6px;
-}
-
-.instance-info-traffic {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.instance-info-note {
-  color: var(--text-tertiary);
-  font-size: 11px;
-  font-weight: 500;
 }
 
 .instance-overview-multi {
@@ -1880,21 +1738,6 @@ body::after {
 
 .instance-overview-multi > span {
   line-height: inherit;
-}
-
-.instance-progress-track {
-  height: 8px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: var(--progress-bg);
-  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.22);
-}
-
-.instance-progress-fill {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--progress-cpu) 0%, var(--progress-memory) 100%);
 }
 
 .instance-series-stats {
@@ -2459,10 +2302,6 @@ body::after {
     justify-content: flex-start;
   }
 
-  .instance-info-groups {
-    grid-template-columns: 1fr;
-  }
-
   .instance-chart-meta {
     width: 100%;
   }
@@ -2764,18 +2603,6 @@ body::after {
   .ip-stack-bulk > button {
     grid-column: 1 / -1;
   }
-}
-
-/* 详情页「网络协议」：和首页一样的 V4 / V6 标签，排在一行。 */
-.instance-ip-stack {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  vertical-align: middle;
-}
-.instance-ip-stack .ip-stack-badge {
-  height: 20px;
-  border-radius: calc(6px * var(--radius-scale, 1));
 }
 
 /* 详情页 Agent 版本：版本号后面跟「可更新」标签（只有登录站长看得到）。 */

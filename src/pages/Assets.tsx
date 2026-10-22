@@ -10,6 +10,7 @@ import { useThemeSettings } from "@/hooks/useThemeSettings";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useHourlyClock } from "@/hooks/useClock";
 import { useVisibleNodes } from "@/hooks/useVisibleNodes";
+import { useSiteBillingSwitches } from "@/hooks/useNode";
 import { useMaskLookup } from "@/hooks/useScreenshotMask";
 import {
   calculateCostSummary,
@@ -128,6 +129,7 @@ export function Assets() {
   const mask = useMaskLookup();
   const forceRateRefresh = useRef(false);
   const nodes = useVisibleNodes();
+  const siteBilling = useSiteBillingSwitches();
   // 资产详情页是风险核对入口：这里始终按真实到期数据展示，不读取首页的关闭/稍后偏好。
   const renewalReminders = useMemo(() => getRenewalReminders(nodes, now), [nodes, now]);
   const renewalByUuid = useMemo(
@@ -142,7 +144,7 @@ export function Assets() {
       return getExchangeRates(themeSettings.costRateApiUrl, { signal, ignoreCache });
     },
     staleTime: 60 * 60 * 1000,
-    enabled: themeSettings.isReady && nodes.length > 0,
+    enabled: themeSettings.isReady && siteBilling.price && nodes.length > 0,
     retry: 1,
   });
   // 汇率接口失败也要出统计：人民币定价的节点不需要换算，外币节点单独标「汇率缺失」。
@@ -196,7 +198,7 @@ export function Assets() {
     }
   };
 
-  if (!themeSettings.isReady) {
+  if (!themeSettings.isReady || !siteBilling.known) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
         <Spinner size={24} />
@@ -204,8 +206,8 @@ export function Assets() {
     );
   }
 
-  // 入口关掉 = 站长不想暴露资产信息，直连 URL 一并回首页。
-  if (!themeSettings.showCostSummary) {
+  // 入口关掉 = 站长不想暴露资产信息，直连 URL 一并回首页；后台关了「显示价格」也一样（资产就是价格加起来）。
+  if (!themeSettings.showCostSummary || !siteBilling.price) {
     return <Navigate to="/" replace />;
   }
 

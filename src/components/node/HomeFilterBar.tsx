@@ -159,6 +159,7 @@ export function HomeFilterBar({
   selectedStack,
   onSelectStack,
   sort,
+  hidePriceSort = false,
   scopeOffline,
 }: {
   groups: GroupMenuItem[] | null;
@@ -171,6 +172,8 @@ export function HomeFilterBar({
   selectedStack: StackFilter;
   onSelectStack: (stack: StackFilter) => void;
   sort: HomeSortControlState | null;
+  /** 后台关了「显示价格」：价格都抹掉了，「价格」排序不列出来。 */
+  hidePriceSort?: boolean;
   /** 现在显示的机器里有离线的：分组那格带个红点。 */
   scopeOffline: boolean;
 }) {
@@ -241,7 +244,7 @@ export function HomeFilterBar({
       label: t("filter.sort"),
       value: sort.field === "default" ? null : `${homeSortFieldLabel(sort.field)} ${arrow}`,
       title: t("filter.sortTitle"),
-      options: HOME_SORT_FIELDS.map((field) => ({
+      options: HOME_SORT_FIELDS.filter((field) => !(hidePriceSort && field === "price")).map((field) => ({
         key: field,
         label: homeSortFieldLabel(field),
         arrow: field === sort.field ? arrow : undefined,

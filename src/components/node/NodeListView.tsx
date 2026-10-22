@@ -7,6 +7,7 @@ import { clsx } from "clsx";
 import { Flag } from "@/components/ui/Flag";
 import { OsLogo } from "@/components/ui/OsLogo";
 import { useNodeCardModel } from "@/hooks/useNodeCardModel";
+import { useSiteBillingSwitches } from "@/hooks/useNode";
 import { usePreferences } from "@/hooks/usePreferences";
 import { useMetricColorsVersion } from "@/hooks/useMetricColors";
 import { formatBytes } from "@/utils/format";
@@ -284,7 +285,7 @@ const NodeRow = memo(function NodeRow({ uuid }: { uuid: string }) {
         ? t("status.offline")
         : t("status.unknown"),
     t("list.ariaUptime", { value: `${uptime.value}${uptime.unit}` }),
-    `${t("card.expire")} ${expire.value}${expire.unit}`,
+    ...(model.showSiteExpire ? [`${t("card.expire")} ${expire.value}${expire.unit}`] : []),
     t("common.viewDetails"),
   ].join(t("common.listSeparator"));
 
@@ -398,13 +399,15 @@ const NodeRow = memo(function NodeRow({ uuid }: { uuid: string }) {
 
       <div className="node-list-cell col-life node-list-stack">
         <StackLine value={uptime.value} unit={uptime.unit} color="var(--progress-cpu)" />
-        <StackLine value={expire.value} unit={expire.unit} color={expireColor} />
+        {model.showSiteExpire ? <StackLine value={expire.value} unit={expire.unit} color={expireColor} /> : null}
       </div>
     </Link>
   );
 });
 
 export function NodeListView({ uuids }: { uuids: string[] }) {
+  // 后台关了「显示到期」，每行只剩在线时长，表头也只写「在线」。
+  const siteBilling = useSiteBillingSwitches();
   return (
     <div className="node-list-scroll">
       <div className="node-list">
@@ -418,7 +421,7 @@ export function NodeListView({ uuids }: { uuids: string[] }) {
           <div className="node-list-cell col-live">{t("traffic.live")}</div>
           <div className="node-list-cell col-traffic">{t("card.traffic")}</div>
           <div className="node-list-cell col-net">{t("list.headNetwork")}</div>
-          <div className="node-list-cell col-life">{t("list.headLife")}</div>
+          <div className="node-list-cell col-life">{t(siteBilling.expire ? "list.headLife" : "card.uptimeLabel")}</div>
         </div>
         {uuids.map((uuid) => (
           <NodeRow key={uuid} uuid={uuid} />

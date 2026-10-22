@@ -115,6 +115,7 @@ beforeEach(() => {
   mocks.getServerSnapshot.mockReset();
   mocks.getServerSnapshot.mockImplementation(async (id: string) => snapshot([id]));
   window.localStorage.clear();
+  window.location.hash = "";
 });
 
 afterEach(() => {
@@ -469,6 +470,36 @@ describe("详情页只订阅正在看的这一台", () => {
   });
 });
 
+describe("直接打开详情页时外壳先订阅 store", () => {
+  it("still loads only that server when the shell retains the store before the page sets its focus", async () => {
+    window.location.hash = "#/server/node-b";
+    mocks.getServersSnapshot.mockImplementation(async () => snapshot(["node-a", "node-b"]));
+    const store = await loadStore();
+    // 外壳（悬浮按钮、离线提醒）先订阅；详情页是按需加载的分包，焦点要等它加载完才设。
+    const releaseShell = store.retainStore();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(syncCount()).toBe(0);
+    expect(mocks.getServerSnapshot).toHaveBeenCalledTimes(1);
+    expect(mocks.getServerSnapshot.mock.calls[0]![0]).toBe("node-b");
+
+    // 详情页加载完、设上焦点：这一台已经有了，不再查。
+    const leave = store.focusRealtimeNode("node-b");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mocks.getServerSnapshot).toHaveBeenCalledTimes(1);
+    expect(syncCount()).toBe(0);
+
+    // 回首页（地址先变、再卸载详情页）：补一次全量。
+    window.location.hash = "#/";
+    leave();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(syncCount()).toBe(1);
+    expect(nodeIds(store)).toEqual(["node-a", "node-b"]);
+
+    releaseShell();
+    await vi.advanceTimersByTimeAsync(0);
+  });
+});
+
 describe("快照同步", () => {
   it("backs off once per failed sync, even when a poll tick joined it", async () => {
     const startedAt = Date.now();
@@ -612,6 +643,79 @@ describe("设置页复用首页的节点表", () => {
     expect(store.getCachedFullNodeList()).toBeNull();
 
     leave();
+    release();
+    await vi.advanceTimersByTimeAsync(0);
+  });
+});
+
+describe("后台「显示价格」「显示到期」开关", () => {
+  const billed = (ids: string[], sysConfig: Record<string, unknown>) => ({
+    ...snapshot(ids),
+    servers: ids.map((id) =>
+      CfsmServerSchema.parse({
+        id,
+        name: id,
+        last_updated: Date.now(),
+        price: "48",
+        currency: "¥",
+        billing_cycle: "monthly",
+        expire_date: "2026-11-15",
+        auto_renewal: "1",
+      }),
+    ),
+    sysConfig,
+  });
+
+  it("关了的那一样在节点信息里就抹掉，开着的原样；引用稳定", async () => {
+    mocks.getServersSnapshot.mockImplementation(async () =>
+      billed(["node-a"], { show_price: false, show_expire: true }),
+    );
+    const store = await loadStore();
+    const release = store.retainStore();
+    await vi.advanceTimersByTimeAsync(0);
+
+    const meta = store.getNodeMetaSnapshot("node-a")!;
+    expect(Number.isNaN(meta.price)).toBe(true);
+    expect(meta.currency).toBe("");
+    expect(meta.expired_at).toBe("2026-11-15");
+    expect(meta.auto_renewal).toBe(true);
+    expect(store.getNodeMetaSnapshot("node-a")).toBe(meta);
+    expect(store.getAllNodeMetaSnapshot()[0]).toBe(meta);
+    expect(store.getSiteBillingVisibilitySnapshot()).toEqual({ known: true, price: false, expire: true });
+
+    release();
+    await vi.advanceTimersByTimeAsync(0);
+  });
+
+  it("直接打开详情页：单台接口不带开关，先都当作不显示；回首页拿到全站列表后按开关来", async () => {
+    mocks.getServerSnapshot.mockImplementation(async (id: string) =>
+      billed([id], { long_history_points: 120 }),
+    );
+    mocks.getServersSnapshot.mockImplementation(async () =>
+      billed(["node-a", "node-b"], { show_price: true, show_expire: true }),
+    );
+    const store = await loadStore();
+    const release = store.retainStore();
+    const leave = store.focusRealtimeNode("node-b");
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(store.getSiteBillingVisibilitySnapshot()).toEqual({ known: false, price: false, expire: false });
+    const detail = store.getNodeMetaSnapshot("node-b")!;
+    expect(Number.isNaN(detail.price)).toBe(true);
+    expect(detail.expired_at).toBe("");
+    expect(store.getSysConfigSnapshot().long_history_points).toBe(120);
+
+    const notified = vi.fn();
+    const unsubscribe = store.subscribeToNodeMeta("node-b", notified);
+    leave();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(store.getSiteBillingVisibilitySnapshot()).toEqual({ known: true, price: true, expire: true });
+    expect(notified).toHaveBeenCalled();
+    expect(store.getNodeMetaSnapshot("node-b")!.price).toBe(48);
+    expect(store.getNodeMetaSnapshot("node-b")!.expired_at).toBe("2026-11-15");
+
+    unsubscribe();
     release();
     await vi.advanceTimersByTimeAsync(0);
   });

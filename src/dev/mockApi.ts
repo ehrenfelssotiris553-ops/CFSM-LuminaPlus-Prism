@@ -504,9 +504,10 @@ export function installDevMockApi() {
           acc[server.region] = (acc[server.region] ?? 0) + 1;
           return acc;
         }, {}),
+        // `&billing=off`：后台关了「显示价格」「显示到期」。
         sysConfig: {
-          show_price: true,
-          show_expire: true,
+          show_price: new URLSearchParams(window.location.search).get("billing") !== "off",
+          show_expire: new URLSearchParams(window.location.search).get("billing") !== "off",
           show_tf: true,
           show_time: true,
           show_three_net_details: threeNetDetails,
@@ -524,8 +525,11 @@ export function installDevMockApi() {
           headers: { "Content-Type": "application/json" },
         });
       }
+      // 和真后端一样：单台接口不带首页那两小时的延迟窗口，sysConfig 也只有 long_history_points。
       return json({
         ...buildServerPayload(SERVERS[index]!, index),
+        ping: [],
+        loss: [],
         latestReportUpdates: [],
         sysConfig: { long_history_points: 120 },
       });

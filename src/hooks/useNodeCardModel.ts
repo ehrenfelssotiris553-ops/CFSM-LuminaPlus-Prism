@@ -1,7 +1,7 @@
 import { t } from "@/i18n";
 import { useMemo } from "react";
 import { useHourlyClock, useMinuteClock } from "@/hooks/useClock";
-import { useNodeCardSnapshots, useShowThreeNetDetails } from "@/hooks/useNode";
+import { useNodeCardSnapshots, useShowThreeNetDetails, useSiteBillingSwitches } from "@/hooks/useNode";
 import {
   buildPingBuckets,
   useNodeMultiPingTaskIds,
@@ -65,6 +65,8 @@ export function useNodeCardModel(
   }: NodeCardModelOptions = {},
 ) {
   const { meta, metrics, trafficTrend } = useNodeCardSnapshots(uuid);
+  // 后台「显示价格」「显示到期」：节点信息里已经抹掉了，卡片据此把价格、到期那一行整个收起来。
+  const siteBilling = useSiteBillingSwitches();
   // 截图打码：被选中的机器在这里就把文字换成假内容，四种卡片拿到的都是假的（见 utils/screenshotMask）。
   const mask = useNodeMask(uuid);
   const {
@@ -240,8 +242,10 @@ export function useNodeCardModel(
       maskTokens: maskTokens(mask),
       osName: resolveOsInfo(meta.os).name,
       loadBaseline: meta.cpu_cores > 0 ? meta.cpu_cores : 4,
+      showSitePrice: siteBilling.price,
+      showSiteExpire: siteBilling.expire,
     };
-  }, [meta, now, showCardGroup, showCardPrice, showIpv4, showIpv6, homepageIpStackOverrides, mask]);
+  }, [meta, now, showCardGroup, showCardPrice, showIpv4, showIpv6, homepageIpStackOverrides, mask, siteBilling]);
 
   // ping 派生的颜色只在 ping item 变化时才变。
   const pingModel = useMemo(

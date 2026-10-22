@@ -352,6 +352,20 @@ export function useNodePingOverviewLines(
   );
 }
 
+/** 详情页：这台节点所有有数据的线路（不管首页选了哪几条），同一份实时缓冲区，不多发请求。 */
+export function useNodeAvailablePingLines(uuid: string, enabled = true): HomepagePingLine[] {
+  const samples = usePingSamples(uuid, enabled);
+  const taskIds = listAvailablePingTaskIds(samples);
+  const carrierNames = useCarrierNames();
+  return useMemo(
+    () =>
+      enabled
+        ? getCachedLines(uuid, taskIds, samples, undefined, carrierNames)
+        : EMPTY_PING_LINES,
+    [carrierNames, enabled, samples, taskIds, uuid],
+  );
+}
+
 /** 这台节点在本机换过的线路；没换过是同一个空表，引用稳定。 */
 export function useNodePingLineOverrides(uuid: string): PingLineOverrides {
   const getSnapshot = useCallback(() => getPingLineOverrides(uuid), [uuid]);

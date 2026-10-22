@@ -103,8 +103,8 @@ function useLayoutCard(uuid: string, kind: NewViewMode) {
     showTotals: settings.compactShowTrafficTotal,
     showUptime: settings.compactShowUptime,
     showConn: settings.showConnections,
-    showPrice: showBilling && settings.showCardPrice && Boolean(ready.renewalPrice),
-    showExpire: showBilling,
+    showPrice: showBilling && ready.showSitePrice && settings.showCardPrice && Boolean(ready.renewalPrice),
+    showExpire: showBilling && ready.showSiteExpire,
     expireTone,
     expireText: `${ready.expire.value}${ready.expire.unit}`,
     // 「23天」才拼成「23天到期」；「已过期」「长期」原样写；没填到期日（—）就不显示。
@@ -454,7 +454,8 @@ export const BentoNodeCard = memo(function BentoNodeCard({ uuid }: { uuid: strin
     card.showUptime ? { key: "up", label: t("lc.uptimeLabel"), value: card.uptime } : null,
     card.showConn ? { key: "conn", label: "TCP · UDP", value: card.conn } : null,
   ].filter((item): item is { key: string; label: string; value: string } => item != null);
-  const showBill = card.showPrice || card.showExpire;
+  // 价格、到期都没东西可写时不留空的账单格。
+  const showBill = card.showPrice || (card.showExpire && !card.expireEmpty);
   return (
     <CardShell card={card}>
       <div className="lc-bento">
@@ -691,13 +692,16 @@ export const GaugeNodeCard = memo(function GaugeNodeCard({ uuid }: { uuid: strin
         </span>
       </div>
       <Latency card={card} />
-      <footer className="lc-foot">
-        <span className="lc-label">{t("lc.renew")}</span>
-        <span className="lc-foot-end">
-          <Price card={card} />
-          <Expire card={card} />
-        </span>
-      </footer>
+      {/* 价格、到期都不显示（主题开关或后台「显示价格 / 显示到期」关了）时，不留一个只有「续费」两个字的空底栏。 */}
+      {card.showPrice || (card.showExpire && !card.expireEmpty) ? (
+        <footer className="lc-foot">
+          <span className="lc-label">{t("lc.renew")}</span>
+          <span className="lc-foot-end">
+            <Price card={card} />
+            <Expire card={card} />
+          </span>
+        </footer>
+      ) : null}
     </CardShell>
   );
 });

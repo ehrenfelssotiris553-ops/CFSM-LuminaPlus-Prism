@@ -486,6 +486,8 @@ function CompactNodeInfoStrip({
   downRate,
   showTrafficTotal,
   showBilling,
+  showPrice,
+  showExpire,
   showConnections,
   expire,
   expireColor,
@@ -497,6 +499,9 @@ function CompactNodeInfoStrip({
   downRate: ByteRateDisplay;
   showTrafficTotal: boolean;
   showBilling: boolean;
+  /** 后台「显示价格」「显示到期」：关了的那一行不画（不写成「免费」或「—」）。 */
+  showPrice: boolean;
+  showExpire: boolean;
   showConnections: boolean;
   expire: CompactExpire;
   expireColor: string;
@@ -561,17 +566,21 @@ function CompactNodeInfoStrip({
           color="var(--status-success)"
           field="billing"
         >
-          <CompactInfoRow
-            icon={<Calendar size={12} strokeWidth={2.1} />}
-            value={formatCompactExpire(expire)}
-            color={expireColor}
-          />
-          <CompactInfoRow
-            icon={<CircleDollarSign size={12} strokeWidth={2.2} />}
-            // 后端 price 为空/0/-1 都表示免费，小卡片直接写「免费」而不是留白。
-            value={renewalPrice || t("billing.free")}
-            color={renewalPrice ? "var(--status-success)" : "var(--text-tertiary)"}
-          />
+          {showExpire ? (
+            <CompactInfoRow
+              icon={<Calendar size={12} strokeWidth={2.1} />}
+              value={formatCompactExpire(expire)}
+              color={expireColor}
+            />
+          ) : null}
+          {showPrice ? (
+            <CompactInfoRow
+              icon={<CircleDollarSign size={12} strokeWidth={2.2} />}
+              // 后端 price 为空/0/-1 都表示免费，小卡片直接写「免费」而不是留白。
+              value={renewalPrice || t("billing.free")}
+              color={renewalPrice ? "var(--status-success)" : "var(--text-tertiary)"}
+            />
+          ) : null}
         </CompactInfoTile>
       )}
       {showConnections && (
@@ -744,7 +753,8 @@ export const CompactNodeCard = memo(function CompactNodeCard({
     osName,
   } = model;
   const showTrafficTotal = themeSettings.isReady && themeSettings.compactShowTrafficTotal;
-  const showBilling = themeSettings.isReady && themeSettings.compactShowBilling;
+  const showBilling =
+    themeSettings.isReady && themeSettings.compactShowBilling && (model.showSitePrice || model.showSiteExpire);
   const showUptime = themeSettings.isReady && themeSettings.compactShowUptime;
   const showConnections = themeSettings.isReady && themeSettings.showConnections;
   // 开关关闭或节点离线时,完全跳过格式化工作。
@@ -766,6 +776,8 @@ export const CompactNodeCard = memo(function CompactNodeCard({
         downRate={downRate}
         showTrafficTotal={showTrafficTotal}
         showBilling={showBilling}
+        showPrice={model.showSitePrice}
+        showExpire={model.showSiteExpire}
         showConnections={showConnections}
         expire={expire}
         expireColor={expireColor}

@@ -90,5 +90,6 @@ describe("retainAssets", () => {
 
     // 之后再发同一份产物：报告 same（工作流据此跳过发布）。
     expect(publish(workdir, d, t0 + 20 * 3600)).toBe("same");
-  });
+    // 要起几十个 git 进程，Windows 上和别的测试一起跑时会超过默认的 5 秒。
+  }, 30_000);
 });

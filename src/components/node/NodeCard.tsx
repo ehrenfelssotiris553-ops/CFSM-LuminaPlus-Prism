@@ -183,6 +183,7 @@ export const NodeCard = memo(function NodeCard({
         </div>
 
         <NodeCardFooter
+          showExpire={model.showSiteExpire}
           expire={expire}
           expireColor={expireColor}
           uptime={uptime}
@@ -586,12 +587,15 @@ function FooterPriceChip({ renewalPrice, titled }: { renewalPrice: string; title
 }
 
 function NodeCardFooter({
+  showExpire,
   expire,
   expireColor,
   uptime,
   footerTags,
   renewalPrice,
 }: {
+  /** 后台「显示到期」关了就不画到期这一格。 */
+  showExpire: boolean;
   expire: DisplayStat;
   expireColor: string;
   uptime: DisplayStat;
@@ -672,13 +676,15 @@ function NodeCardFooter({
           unit={uptime.unit}
           color="var(--progress-cpu)"
         />
-        <FooterStat
-          icon={<Calendar size={13} strokeWidth={2} />}
-          label={t("card.expire")}
-          value={expire.value}
-          unit={expire.unit}
-          color={expireColor}
-        />
+        {showExpire ? (
+          <FooterStat
+            icon={<Calendar size={13} strokeWidth={2} />}
+            label={t("card.expire")}
+            value={expire.value}
+            unit={expire.unit}
+            color={expireColor}
+          />
+        ) : null}
       </div>
       {(footerTags.length > 0 || renewalPrice) && (
         <>

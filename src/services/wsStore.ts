@@ -459,6 +459,36 @@ let nodeOnlineSummariesSnapshot: NodeOnlineSummary[] = [];
 let nodeOnlineSummariesSnapshotVersion = -1;
 let nodeOnlineSummariesVersion = 0;
 let sysConfigSnapshot: SysConfig = DEFAULT_SYS_CONFIG;
+
+/**
+ * 后台「显示价格」「显示到期」两个开关。后端照样把价格、到期日下发给所有人，只靠前台不显示（后端自己的前台就是按它藏的），
+ * 所以在这里统一抹掉：首页卡片、排序、资产、续费提醒、详情页拿到的节点信息里就没有这两样，不会有哪个角落漏出来。
+ * 只有全站列表（`/api/servers`）带这两个开关；直接打开详情页只查单台（`/api/server` 和 `/api/config` 都不带），
+ * 拿到全站列表之前一律当作不显示（站长定的：宁可少显示，不泄露）。
+ */
+export interface SiteBillingVisibility {
+  /** 拿到过全站列表、知道这两个开关了。 */
+  known: boolean;
+  price: boolean;
+  expire: boolean;
+}
+let siteBillingVisibility: SiteBillingVisibility = { known: false, price: false, expire: false };
+let billingMaskCache = new WeakMap<NodeInfo, NodeInfo>();
+
+function withSiteBillingSwitches(meta: NodeInfo): NodeInfo {
+  const { price, expire } = siteBillingVisibility;
+  if (price && expire) return meta;
+  const cached = billingMaskCache.get(meta);
+  if (cached) return cached;
+  const masked: NodeInfo = {
+    ...meta,
+    // NaN：formatRenewalPrice 当作没填价格（不是「免费」），资产统计也不算它。
+    ...(price ? {} : { price: Number.NaN, currency: "", billing_cycle: "" }),
+    ...(expire ? {} : { expired_at: "", auto_renewal: false }),
+  };
+  billingMaskCache.set(meta, masked);
+  return masked;
+}
 let storeStatusSnapshot: StoreStatusSnapshot = {
   failureStreak: 0,
   hydrated: false,
@@ -905,7 +935,8 @@ async function performServersSync(focusUuid: string | null, mergeFocused = false
     fullNodeListCached = focusUuid == null;
     fullNodeListToken = getJwtToken();
 
-    const sysConfigChanged = updateSysConfigSnapshot(snapshot.sysConfig);
+    const billingBefore = siteBillingVisibility;
+    const sysConfigChanged = updateSysConfigSnapshot(snapshot.sysConfig, focusUuid == null);
     const storeStatusChanged =
       !hydrated || nodeInfoError || partialSites !== snapshot.partial;
     hydrated = true;
@@ -941,6 +972,7 @@ async function performServersSync(focusUuid: string | null, mergeFocused = false
       );
     }
     if (sysConfigChanged) emitListeners(sysConfigListeners);
+    if (siteBillingVisibility !== billingBefore) refreshBillingMasks();
   } catch (error) {
     if (!controller.signal.aborted) {
       nodeInfoError = true;
@@ -1277,9 +1309,32 @@ function refreshOnlineFlags() {
   commit({ ...state, metricsByUuid: nextMetricsByUuid }, { metrics: touched });
 }
 
-function updateSysConfigSnapshot(next: SysConfig): boolean {
-  const resolved: SysConfig = { ...DEFAULT_SYS_CONFIG, ...next };
+/** 价格 / 到期开关变了：抹过的节点信息全部作废，通知所有订阅节点信息的地方重新取。 */
+function refreshBillingMasks() {
+  billingMaskCache = new WeakMap();
+  storeVersion += 1;
+  emitListeners(allNodesListeners);
+  for (const listeners of nodeMetaListeners.values()) emitListeners(listeners);
+}
+
+/**
+ * `fromFullList`：这份 sysConfig 来自全站列表。单台接口（`/api/server`）的 sysConfig 只带 `long_history_points`，
+ * 其余是解析时补的默认值，拿它覆盖会把首页那份开关冲回默认，所以只取 `long_history_points`。
+ */
+function updateSysConfigSnapshot(next: SysConfig, fromFullList: boolean): boolean {
+  const resolved: SysConfig = fromFullList
+    ? { ...DEFAULT_SYS_CONFIG, ...next }
+    : { ...sysConfigSnapshot, long_history_points: next.long_history_points };
+  const known = siteBillingVisibility.known || fromFullList;
+  const price = known && resolved.show_price;
+  const expire = known && resolved.show_expire;
+  const visibilityChanged =
+    siteBillingVisibility.known !== known ||
+    siteBillingVisibility.price !== price ||
+    siteBillingVisibility.expire !== expire;
+  if (visibilityChanged) siteBillingVisibility = { known, price, expire };
   if (
+    !visibilityChanged &&
     sysConfigSnapshot.show_price === resolved.show_price &&
     sysConfigSnapshot.show_expire === resolved.show_expire &&
     sysConfigSnapshot.show_tf === resolved.show_tf &&
@@ -1590,8 +1645,25 @@ function bootstrap(): Promise<void> {
  * 从首页点进来的已经有全站数据，不用再查。多后端部署时由 getServerSnapshot 去找这台在哪个站。
  */
 function focusOnlyTarget(): string | null {
-  if (realtimeFocusUuid == null) return null;
-  return !hydrated || focusOnlyHydrated ? realtimeFocusUuid : null;
+  const focus = realtimeFocusUuid ?? (hydrated ? null : detailRouteUuid());
+  if (focus == null) return null;
+  return !hydrated || focusOnlyHydrated ? focus : null;
+}
+
+/**
+ * 地址栏是不是详情页（`#/server/<id>`）。直接打开详情页时，外壳里的组件（悬浮按钮、离线提醒）比详情页先订阅 store ——
+ * 详情页是按需加载的分包，等它设上焦点（focusRealtimeNode）时，首次取数早就按「全站」发出去了，
+ * 原来单台取数实际从没生效过。所以还没取过数、焦点又没设时，先看地址栏。
+ */
+function detailRouteUuid(): string | null {
+  if (typeof window === "undefined") return null;
+  const match = /^#\/server\/([^/?#]+)/.exec(window.location.hash);
+  if (!match) return null;
+  try {
+    return decodeURIComponent(match[1]!);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -1837,8 +1909,14 @@ export function getSysConfigSnapshot(): SysConfig {
   return sysConfigSnapshot;
 }
 
+/** 价格、到期能不能显示（见 SiteBillingVisibility）；值没变时引用不变。 */
+export function getSiteBillingVisibilitySnapshot(): SiteBillingVisibility {
+  return siteBillingVisibility;
+}
+
 export function getNodeMetaSnapshot(uuid: string): NodeInfo | undefined {
-  return state.metaByUuid[uuid];
+  const meta = state.metaByUuid[uuid];
+  return meta ? withSiteBillingSwitches(meta) : undefined;
 }
 
 export function getNodeMetricsSnapshot(uuid: string): NodeMetrics | undefined {
@@ -1875,7 +1953,8 @@ export function getAllNodeMetaSnapshot(): NodeInfo[] {
 
   const next = state.order
     .map((uuid) => state.metaByUuid[uuid])
-    .filter((node): node is NodeInfo => Boolean(node));
+    .filter((node): node is NodeInfo => Boolean(node))
+    .map(withSiteBillingSwitches);
 
   if (
     !(

@@ -1,0 +1,805 @@
+/*
+ * 详情页上半部分（components/instance/InstanceOverview.tsx）。
+ * 只由详情页引入，跟着详情页的分包加载，首页不多一个字节。
+ * 颜色全部走主题变量、圆角乘 --radius-scale，七套风格直接套用；卡片底用 .instance-panel，和原来的面板一样。
+ */
+
+.iov {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ---------- 顶栏 ---------- */
+
+.iov-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+}
+
+.iov-nav-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  min-width: 0;
+}
+
+.iov-step,
+.iov-nav .instance-switcher-trigger[data-labelled] {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: auto;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  white-space: nowrap;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.iov-nav .instance-switcher-trigger[data-labelled] {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.iov-step:hover,
+.iov-nav .instance-switcher-trigger[data-labelled]:hover {
+  color: var(--text-primary);
+  background: var(--hover-bg);
+}
+
+.iov-step[aria-disabled="true"] {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.iov-step[data-dir="next"] {
+  flex-direction: row-reverse;
+}
+
+.iov-step-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+/* 顶栏在右边，菜单从按钮右缘往左展开。 */
+.iov-nav .instance-switcher-panel {
+  left: auto;
+  right: 0;
+}
+
+/* ---------- 名字、状态、标签 ---------- */
+
+.iov-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+}
+
+.iov-hero-main {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.iov-hero-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.iov-name {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.iov-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-tertiary);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.iov-status > i {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 20%, transparent);
+}
+
+.iov-status[data-tone="good"] {
+  color: var(--status-success);
+}
+
+.iov-status[data-tone="bad"] {
+  color: var(--status-error);
+}
+
+.iov-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+}
+
+.iov-os {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.iov-sub::before {
+  content: "·";
+  margin-right: 8px;
+  color: var(--text-tertiary);
+}
+
+/* ---------- 体检结论 ---------- */
+
+.iov-verdict {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 18px;
+  border: 1px solid color-mix(in srgb, var(--iov-tone) 35%, transparent);
+  border-radius: calc(16px * var(--radius-scale, 1));
+  background: color-mix(in srgb, var(--iov-tone) 8%, var(--surface));
+}
+
+.iov-verdict-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.iov-verdict-head b {
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.iov-verdict-head span {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.iov-verdict-item {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.iov-verdict-item > i {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--status-warning);
+  transform: translateY(-1px);
+}
+
+.iov-verdict-item[data-tone="bad"] {
+  font-weight: 700;
+}
+
+.iov-verdict-item[data-tone="bad"] > i {
+  background: var(--status-error);
+}
+
+.iov-verdict-item[data-tone="warn"] {
+  font-weight: 600;
+}
+
+.iov-verdict-item[data-tone="good"] > i {
+  background: var(--status-success);
+}
+
+.iov-verdict-item[data-rest] {
+  color: var(--text-secondary);
+}
+
+.iov-verdict-link {
+  flex: none;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-500);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.iov-verdict-link:hover {
+  text-decoration: underline;
+}
+
+/* ---------- 此刻 ---------- */
+
+.iov-vitals {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+  scroll-margin-top: 16px;
+}
+
+.iov-vitals[data-stale] {
+  opacity: 0.6;
+}
+
+.iov-vital {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+  padding: 13px 14px;
+  border-radius: calc(16px * var(--radius-scale, 1));
+}
+
+.iov-vital-label {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.iov-vital-value {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.iov-vital-value small {
+  margin-left: 2px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.iov-vital-bar {
+  display: block;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--progress-bg);
+}
+
+.iov-vital-bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.iov-vital-sub {
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- 各块公共的标题行 ---------- */
+
+.iov-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.iov-section-head b {
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.iov-section-head > span {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.iov-ghost-button {
+  margin-left: auto;
+  padding: 3px 10px;
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-tertiary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.iov-ghost-button:hover,
+.iov-ghost-button[aria-pressed="true"] {
+  color: var(--text-primary);
+}
+
+/* ---------- 线路 ---------- */
+
+.iov-lines {
+  /* 丢包格子的颜色，和首页丢包图同一套（风格可以改）。 */
+  --loss-ok: color-mix(in srgb, var(--status-success) 50%, transparent);
+  --loss-warn: var(--status-warning);
+  --loss-bad: var(--status-error);
+  --loss-none: var(--progress-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 20px;
+  scroll-margin-top: 16px;
+}
+
+:root[data-skin="collage"] .iov-lines {
+  --loss-ok: color-mix(in srgb, var(--tint-mint) 55%, transparent);
+  --loss-bad: var(--tint-sakura);
+}
+
+.iov-line {
+  display: grid;
+  grid-template-columns: minmax(96px, 150px) minmax(0, 1fr) 72px 150px;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.iov-section-head + .iov-line {
+  margin-top: 4px;
+  border-top-color: transparent;
+}
+
+.iov-line-name {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.iov-line-name > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iov-line-name small {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.iov-line-chart {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.iov-line-bars,
+.iov-line-loss {
+  display: flex;
+  gap: 2px;
+}
+
+.iov-line-bars {
+  height: 22px;
+  align-items: flex-end;
+}
+
+.iov-line-loss {
+  height: 8px;
+  align-items: flex-start;
+}
+
+.iov-line-bars > i,
+.iov-line-loss > i {
+  flex: 1;
+  min-height: 2px;
+}
+
+.iov-line-bars > i {
+  border-radius: calc(2px * var(--radius-scale, 1)) calc(2px * var(--radius-scale, 1)) 0 0;
+}
+
+.iov-line-bars > i[data-empty] {
+  height: 2px !important;
+  background: var(--progress-bg) !important;
+}
+
+.iov-line-loss > i {
+  border-radius: 0 0 calc(2px * var(--radius-scale, 1)) calc(2px * var(--radius-scale, 1));
+  background: var(--loss-none);
+}
+
+.iov-line-loss > i[data-tone="ok"] {
+  background: var(--loss-ok);
+}
+
+.iov-line-loss > i[data-tone="warn"] {
+  background: var(--loss-warn);
+}
+
+.iov-line-loss > i[data-tone="bad"] {
+  background: var(--loss-bad);
+}
+
+.iov-line-ms {
+  justify-self: end;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.iov-line-ms small {
+  margin-left: 2px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.iov-line-stat {
+  color: var(--text-tertiary);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+/* ---------- 账单和流量 / 硬件与系统 ---------- */
+
+.iov-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 14px;
+}
+
+.iov-billing,
+.iov-hardware {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 20px;
+}
+
+.iov-billing {
+  scroll-margin-top: 16px;
+}
+
+.iov-billing-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.iov-tile {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: calc(12px * var(--radius-scale, 1));
+  background: var(--surface-sunken, var(--hover-bg));
+  color: var(--text-secondary);
+  font-size: 11.5px;
+}
+
+.iov-tile b {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iov-tile small {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.iov-tile[data-tone="warn"] b,
+.iov-tile[data-tone="warn"] small {
+  color: var(--status-warning);
+}
+
+.iov-tile[data-tone="bad"] b,
+.iov-tile[data-tone="bad"] small {
+  color: var(--status-error);
+}
+
+.iov-traffic {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.iov-traffic-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.iov-traffic-head > span {
+  margin-left: auto;
+  font-weight: 700;
+}
+
+.iov-traffic-bar {
+  position: relative;
+  display: block;
+  height: 8px;
+  margin: 2px 0;
+  border-radius: 999px;
+  background: var(--progress-bg);
+}
+
+.iov-traffic-bar > i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.iov-traffic-bar > .is-used {
+  left: 0;
+  border-radius: 999px;
+}
+
+/* 按现在的速度到重置前还会用掉的那段：斜纹。 */
+.iov-traffic-bar > .is-projected {
+  border-radius: 0 999px 999px 0;
+  background: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--text-tertiary) 35%, transparent) 0 4px,
+    transparent 4px 8px
+  );
+}
+
+.iov-traffic-bar > .is-marker {
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 2px;
+  background: var(--text-secondary);
+}
+
+.iov-traffic-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+}
+
+.iov-traffic-projection {
+  margin-left: auto;
+  color: var(--text-primary);
+}
+
+.iov-traffic-projection[data-over] {
+  color: var(--status-warning);
+}
+
+.iov-fold {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-tertiary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.iov-fold b {
+  flex: none;
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.iov-fold svg {
+  flex: none;
+  margin-left: auto;
+}
+
+.iov-fold-summary {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iov-hw-rows {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 18px;
+}
+
+.iov-hw-row {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 0;
+  border-top: 1px solid var(--hairline);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+}
+
+.iov-hw-value {
+  min-width: 0;
+  margin-left: auto;
+  color: var(--text-primary);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+/* ---------- 截图打码：和首页卡片一样把假内容模糊掉（标签 .lc-tag 由 styles/mask.css 管） ---------- */
+
+[data-mask~="name"] .iov-name {
+  filter: blur(6px);
+  user-select: none;
+}
+
+[data-mask~="tags"] .iov-sub,
+[data-mask~="price"] .iov-tile[data-field="price"] b {
+  filter: blur(4px);
+  user-select: none;
+}
+
+/* ---------- 窄屏 ---------- */
+
+@media (max-width: 1023px) {
+  .iov-vitals {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .iov-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .iov-line {
+    grid-template-columns: minmax(84px, 120px) minmax(0, 1fr) 64px;
+  }
+
+  .iov-line-stat {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .iov {
+    gap: 12px;
+  }
+
+  /* 手机上上一台 / 下一台只留箭头，切换菜单留字。 */
+  .iov-step {
+    width: 32px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .iov-step-text {
+    display: none;
+  }
+
+  .iov-hero {
+    align-items: flex-start;
+    padding: 13px 14px;
+  }
+
+  .iov-name {
+    font-size: 19px;
+  }
+
+  .iov-verdict {
+    padding: 12px 14px;
+  }
+
+  .iov-verdict-head span {
+    display: none;
+  }
+
+  .iov-verdict-item {
+    font-size: 12.5px;
+  }
+
+  .iov-vitals {
+    gap: 8px;
+  }
+
+  .iov-vital {
+    gap: 4px;
+    padding: 10px 11px;
+  }
+
+  .iov-vital-value {
+    font-size: 18px;
+  }
+
+  .iov-vital-value small {
+    font-size: 10.5px;
+  }
+
+  .iov-vital-sub {
+    font-size: 10.5px;
+  }
+
+  .iov-lines,
+  .iov-billing,
+  .iov-hardware {
+    padding: 12px 14px;
+  }
+
+  .iov-section-head > span {
+    display: none;
+  }
+
+  .iov-line {
+    grid-template-columns: 78px minmax(0, 1fr) 56px;
+    gap: 8px;
+  }
+
+  .iov-line-bars {
+    height: 18px;
+    gap: 1.5px;
+  }
+
+  .iov-line-loss {
+    height: 7px;
+    gap: 1.5px;
+  }
+
+  .iov-line-ms {
+    font-size: 16px;
+  }
+
+  .iov-billing-tiles {
+    gap: 6px;
+  }
+
+  .iov-tile b {
+    font-size: 14px;
+  }
+
+  .iov-hw-rows {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .iov-traffic-projection {
+    margin-left: 0;
+  }
+}
