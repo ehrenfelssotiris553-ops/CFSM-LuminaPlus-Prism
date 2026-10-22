@@ -981,7 +981,6 @@
   --loss-warn: var(--status-warning);
   --loss-bad: var(--status-error);
   --loss-none: var(--progress-bg);
-  --loss-base: color-mix(in srgb, var(--text-primary) 18%, transparent);
   display: flex;
   min-width: 0;
   flex-direction: column;
@@ -1182,7 +1181,7 @@
 
 /* 倒影的基线也是一条丢包时间线：没丢包淡绿、没数据灰、丢包黄红。 */
 .lc-loss-base {
-  stroke: var(--loss-base);
+  stroke: var(--loss-none);
   stroke-width: 2;
   vector-effect: non-scaling-stroke;
 }
