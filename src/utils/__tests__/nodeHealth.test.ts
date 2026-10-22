@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { computeNodeHealth, type NodeHealthInput } from "@/utils/nodeHealth";
-import { LAYOUT_PAIRS, NEW_VIEW_MODES } from "@/utils/layouts";
+import { followLayout, NEW_VIEW_MODES } from "@/utils/layouts";
 import { SKIN_IDS } from "@/utils/skin";
 import { isNodeViewMode, normalizeThemeSettings } from "@/utils/themeSettings";
 
@@ -79,9 +79,12 @@ describe("new layouts", () => {
     }
   });
 
-  it("each pair with an existing style, one pair per new layout", () => {
-    expect(LAYOUT_PAIRS.map(([mode]) => mode).sort()).toEqual([...NEW_VIEW_MODES].sort());
-    for (const [, skin] of LAYOUT_PAIRS) expect(SKIN_IDS).toContain(skin);
+  it("following the style gives every new layout to exactly one style, and the original layout to Lumina", () => {
+    const followed = SKIN_IDS.filter((skin) => skin !== "lumina").map((skin) => followLayout(skin, "desktop"));
+    expect([...followed].sort()).toEqual([...NEW_VIEW_MODES].sort());
+    expect(followLayout("lumina", "desktop")).toBe("large");
+    expect(followLayout("lumina", "mobile")).toBe("compact");
+    expect(followLayout("collage", "mobile")).toBe("bento");
   });
 });
 

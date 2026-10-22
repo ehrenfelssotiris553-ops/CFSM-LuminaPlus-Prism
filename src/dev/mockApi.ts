@@ -438,7 +438,9 @@ export function installDevMockApi() {
         durableObjectsRequestsEstimated: true,
         durableObjectsRequestBillingRatio: 20,
       });
-      return json({ success: true, usage: { today: day(1), yesterday: day(1.6) }, message: "d1UsageQueried" });
+      // `&cfusage=low`：用量很低（不到 1%），看各种画法是不是至少画出一小段。
+      const scale = scenario === "low" ? 0.001 : 1;
+      return json({ success: true, usage: { today: day(scale), yesterday: day(1.6 * scale) }, message: "d1UsageQueried" });
     }
 
     if (url.pathname === "/api/config") {

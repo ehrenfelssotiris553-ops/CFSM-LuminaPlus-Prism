@@ -1,13 +1,15 @@
 /*
- * 首页模块按「风格」各有一套样子：顶部总览、站长区（CF 用量、Agent 更新）、续费提醒、筛选栏。
+ * 首页模块按「风格」各有一套样子：顶部总览、站长区、续费提醒、筛选栏。
  * 布局只管机器卡片，这些模块属于整个页面，所以跟风格走；同样的内容，只是排版和画法不同：
- *   流光   原样（没有 data-skin，这里一条都不生效）
- *   素白   报纸头版：双线刊头、衬线大数字、细线分格；用量是账本式虚线；续费是「启事」双线框
- *   雾玻璃 毛玻璃；在线数画成圆环；用量是五个小圆环
- *   终端   等宽字、命令行前缀；条都是一格一格的字符块；选中的筛选加方括号
- *   极光   渐变大数字、背后光晕；渐变发光的条；续费卡渐变描边
- *   座舱   液晶读数、指示灯；用量是竖向电平表；续费是黄黑斜纹警示条；筛选是实体按键
- * 只改样式，不加请求、不加脚本；比例从 --online-pct（在线卡）、--ratio（每项用量）来。
+ *   流光   原样（没有 data-skin，风格规则一条都不生效）
+ *   素白   报纸头版：双线刊头、衬线大数字、细线分格；续费是「启事」双线框
+ *   雾玻璃 毛玻璃
+ *   终端   等宽字、命令行前缀；在线条是一格一格的字符块；选中的筛选加方括号
+ *   极光   渐变大数字、背后光晕；续费卡渐变描边
+ *   座舱   液晶读数、指示灯；续费是黄黑斜纹警示条；筛选是实体按键
+ *   拼贴   每张总览卡一种柔和底色；选中的筛选是墨黑胶囊
+ * 站长区 CF 用量的画法单独选（设置「站长用量」，最下面 data-shape 那几段），颜色仍跟着风格。
+ * 只改样式，不加请求、不加脚本；每项用量的比例从 --ratio 来。
  */
 
 /* ============ 素白 ============ */
@@ -51,17 +53,21 @@
   border-color: var(--text-primary);
 }
 
-:root[data-skin="paper"] .cf-usage-bar {
-  height: 0;
+:root[data-skin="paper"] .cf-usage[data-shape="bars"] .cf-usage-bar {
+  height: 2px;
   margin: 4px 0 2px;
-  overflow: visible;
   border-bottom: 1px dotted var(--text-tertiary);
   border-radius: 0;
   background: none;
 }
 
-:root[data-skin="paper"] .cf-usage-bar > span {
-  display: none;
+:root[data-skin="paper"] .cf-usage[data-shape="bars"] .cf-usage-bar > span {
+  border-radius: 0;
+  background: var(--text-primary);
+}
+
+:root[data-skin="paper"] .cf-usage[data-shape="bars"] .cf-usage-meter[data-level="danger"] .cf-usage-bar > span {
+  background: var(--status-error);
 }
 
 :root[data-skin="paper"] .cf-usage-meter-pct {
@@ -106,64 +112,6 @@
 
 /* ============ 雾玻璃 ============ */
 
-/* 在线卡右上角一个圆环：在线占比。 */
-:root[data-skin="frost"] .overview-card[data-metric="online"]::after {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  background: conic-gradient(var(--status-success) var(--online-pct, 0%), var(--progress-bg) 0);
-  content: "";
-  mask: radial-gradient(closest-side, transparent 72%, #000 73%);
-}
-
-/* 用量：每项一个小圆环，百分比写在环里。 */
-:root[data-skin="frost"] .cf-usage-meter {
-  position: relative;
-  align-items: center;
-  padding-top: 60px;
-  text-align: center;
-}
-
-:root[data-skin="frost"] .cf-usage-meter::before {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: 54px;
-  height: 54px;
-  border-radius: 50%;
-  background: conic-gradient(var(--meter-color) calc(var(--ratio, 0) * 100%), var(--progress-bg) 0);
-  content: "";
-  mask: radial-gradient(closest-side, transparent 76%, #000 77%);
-  transform: translateX(-50%);
-}
-
-:root[data-skin="frost"] .cf-usage-meter-top {
-  display: contents;
-}
-
-:root[data-skin="frost"] .cf-usage-meter-pct {
-  position: absolute;
-  top: 19px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-:root[data-skin="frost"] .cf-usage-meter-label {
-  order: 2;
-  font-size: 11px;
-}
-
-:root[data-skin="frost"] .cf-usage-bar {
-  display: none;
-}
-
-:root[data-skin="frost"] .cf-usage-meter-value {
-  order: 3;
-}
-
 :root[data-skin="frost"] .renewal-reminder-panel {
   background: color-mix(in srgb, var(--surface-elev) 82%, transparent);
   box-shadow: 0 20px 46px -24px rgba(15, 23, 42, 0.42), 0 0 0 1px color-mix(in srgb, var(--status-warning) 30%, transparent);
@@ -184,13 +132,13 @@
   content: "$ ";
 }
 
-:root[data-skin="terminal"] :is(.overview-bar, .cf-usage-bar) {
+:root[data-skin="terminal"] .overview-bar {
   height: 10px;
   border-radius: 0;
   mask: repeating-linear-gradient(90deg, #000 0 6px, transparent 6px 8px);
 }
 
-:root[data-skin="terminal"] :is(.overview-bar, .cf-usage-bar) > span {
+:root[data-skin="terminal"] .overview-bar > span {
   border-radius: 0;
 }
 
@@ -247,12 +195,12 @@
   color: transparent !important;
 }
 
-:root[data-skin="aurora"] .cf-usage-bar > span {
+:root[data-skin="aurora"] .cf-usage[data-shape="bars"] .cf-usage-bar > span {
   background: linear-gradient(90deg, var(--progress-cpu), var(--progress-memory));
   box-shadow: 0 0 10px color-mix(in srgb, var(--progress-memory) 45%, transparent);
 }
 
-:root[data-skin="aurora"] .cf-usage-meter[data-level="danger"] .cf-usage-bar > span {
+:root[data-skin="aurora"] .cf-usage[data-shape="bars"] .cf-usage-meter[data-level="danger"] .cf-usage-bar > span {
   background: linear-gradient(90deg, #fb923c, #fb7185);
   box-shadow: 0 0 10px color-mix(in srgb, #fb7185 45%, transparent);
 }
@@ -302,56 +250,6 @@
   mask: repeating-linear-gradient(90deg, #000 0 7px, transparent 7px 9px);
 }
 
-/* 用量：五根竖向电平表，一格一格，绿 → 琥珀 → 红。 */
-:root[data-skin="cockpit"] .cf-usage-grid {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  padding: 10px 6px 8px;
-  border-radius: 10px;
-  background: var(--surface-sunken);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
-}
-
-:root[data-skin="cockpit"] .cf-usage-meter {
-  align-items: center;
-  text-align: center;
-}
-
-:root[data-skin="cockpit"] .cf-usage-meter:last-child:nth-child(odd) {
-  grid-column: auto;
-}
-
-:root[data-skin="cockpit"] .cf-usage-meter-top {
-  flex-direction: column-reverse;
-  align-items: center;
-  gap: 4px;
-}
-
-:root[data-skin="cockpit"] .cf-usage-meter-top .cf-usage-meter-label {
-  order: -1;
-  font-size: 10.5px;
-}
-
-:root[data-skin="cockpit"] .cf-usage-bar {
-  display: flex;
-  width: 20px;
-  height: 66px;
-  align-items: flex-end;
-  border-radius: 3px;
-  mask: repeating-linear-gradient(0deg, #000 0 5px, transparent 5px 7px);
-}
-
-:root[data-skin="cockpit"] .cf-usage-bar > span {
-  width: 100% !important;
-  height: calc(var(--ratio, 0) * 100%);
-  background: linear-gradient(0deg, var(--status-success), var(--accent-500) 60%, var(--status-error));
-  background-position: bottom;
-  background-size: 100% calc(100% / max(var(--ratio, 0), 0.01));
-}
-
-:root[data-skin="cockpit"] .cf-usage-meter-value {
-  font-size: 10px;
-}
-
 :root[data-skin="cockpit"] .renewal-reminder-head {
   background: repeating-linear-gradient(-45deg, color-mix(in srgb, var(--status-warning) 22%, transparent) 0 8px, transparent 8px 16px);
   border-bottom: 1px solid color-mix(in srgb, var(--status-warning) 40%, transparent);
@@ -395,4 +293,206 @@
 :root[data-skin="cockpit"] .home-filter-trigger[aria-expanded="true"] {
   background: var(--surface-sunken);
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+/* ============ 拼贴 ============ */
+
+:root[data-skin="collage"] .overview-card[data-metric="online"] {
+  background: color-mix(in srgb, var(--tint-mint) 13%, var(--surface-a));
+}
+
+:root[data-skin="collage"] .overview-card[data-metric="bandwidth"] {
+  background: color-mix(in srgb, var(--tint-sky) 13%, var(--surface-a));
+}
+
+:root[data-skin="collage"] .overview-card[data-metric="traffic"] {
+  background: color-mix(in srgb, var(--tint-lilac) 13%, var(--surface-a));
+}
+
+:root[data-skin="collage"] .overview-card[data-metric="asset"] {
+  background: color-mix(in srgb, var(--tint-apricot) 13%, var(--surface-a));
+}
+
+:root[data-skin="collage"] .overview-card[data-metric="online"] .overview-card-label {
+  color: var(--tint-mint);
+}
+
+:root[data-skin="collage"] .overview-card[data-metric="bandwidth"] .overview-card-label {
+  color: var(--tint-sky);
+}
+
+:root[data-skin="collage"] .overview-card[data-metric="traffic"] .overview-card-label {
+  color: var(--tint-lilac);
+}
+
+:root[data-skin="collage"] .overview-card[data-metric="asset"] .overview-card-label {
+  color: var(--tint-apricot);
+}
+
+:root[data-skin="collage"] :is(.overview-card-value, .home-overview-strip-value) {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+:root[data-skin="collage"] .home-filter-trigger[data-active]:not([aria-expanded="true"]) {
+  background: var(--accent-500);
+  color: var(--text-on-strong, #fff);
+}
+
+:root[data-skin="collage"] .renewal-reminder-head {
+  background: color-mix(in srgb, var(--tint-apricot) 14%, transparent);
+}
+
+/* 横条画法下每项用一种颜色（用量高了照旧变黄、变红）。 */
+:root[data-skin="collage"] .cf-usage[data-shape="bars"] .cf-usage-meter:not([data-level="warn"], [data-level="danger"]):nth-child(5n + 1) {
+  --meter-color: var(--tint-sky);
+}
+
+:root[data-skin="collage"] .cf-usage[data-shape="bars"] .cf-usage-meter:not([data-level="warn"], [data-level="danger"]):nth-child(5n + 2) {
+  --meter-color: var(--tint-mint);
+}
+
+:root[data-skin="collage"] .cf-usage[data-shape="bars"] .cf-usage-meter:not([data-level="warn"], [data-level="danger"]):nth-child(5n + 3) {
+  --meter-color: var(--tint-lilac);
+}
+
+:root[data-skin="collage"] .cf-usage[data-shape="bars"] .cf-usage-meter:not([data-level="warn"], [data-level="danger"]):nth-child(5n + 4) {
+  --meter-color: var(--tint-apricot);
+}
+
+:root[data-skin="collage"] .cf-usage[data-shape="bars"] .cf-usage-meter:not([data-level="warn"], [data-level="danger"]):nth-child(5n + 5) {
+  --meter-color: var(--tint-sakura);
+}
+
+/* ============ 站长用量的画法（data-shape，设置「站长用量」；颜色跟着风格） ============ */
+
+/* 用量很低时也至少画出一小段，不会是空的条、空的圈（用量正好是 0 时不画）。 */
+.cf-usage-meter[data-nonzero] .cf-usage-bar > span {
+  min-width: 4px;
+}
+
+/* 小圆环：每项一个，百分比写在环里。 */
+.cf-usage[data-shape="rings"] .cf-usage-meter {
+  position: relative;
+  align-items: center;
+  padding-top: 60px;
+  text-align: center;
+}
+
+.cf-usage[data-shape="rings"] .cf-usage-meter::before {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: conic-gradient(var(--meter-color) calc(max(var(--ratio, 0), var(--ratio-min, 0)) * 100%), var(--progress-bg) 0);
+  content: "";
+  mask: radial-gradient(closest-side, transparent 76%, #000 77%);
+  transform: translateX(-50%);
+}
+
+.cf-usage[data-shape="rings"] .cf-usage-meter[data-nonzero] {
+  --ratio-min: 0.04;
+}
+
+.cf-usage[data-shape="rings"] .cf-usage-meter-top {
+  display: contents;
+}
+
+.cf-usage[data-shape="rings"] .cf-usage-meter-pct {
+  position: absolute;
+  top: 19px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.cf-usage[data-shape="rings"] .cf-usage-meter-label {
+  order: 2;
+  font-size: 11px;
+}
+
+.cf-usage[data-shape="rings"] .cf-usage-bar {
+  display: none;
+}
+
+.cf-usage[data-shape="rings"] .cf-usage-meter-value {
+  order: 3;
+}
+
+/* 字符格：一格一格的方块，不到一格的点亮半格。 */
+.cf-usage[data-shape="chars"] .cf-usage-bar {
+  height: 10px;
+  border-radius: 0;
+  mask: repeating-linear-gradient(90deg, #000 0 6px, transparent 6px 8px);
+}
+
+.cf-usage[data-shape="chars"] .cf-usage-bar > span {
+  border-radius: 0;
+}
+
+.cf-usage[data-shape="chars"] :is(.cf-usage-meter-pct, .cf-usage-meter-value) {
+  font-family: var(--skin-mono);
+}
+
+/* 电平表：五根竖向电平表，一格一格，绿 → 琥珀 → 红。 */
+.cf-usage[data-shape="meters"] .cf-usage-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding: 10px 6px 8px;
+  border-radius: 10px;
+  background: var(--surface-sunken);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.cf-usage[data-shape="meters"] .cf-usage-meter {
+  align-items: center;
+  text-align: center;
+}
+
+.cf-usage[data-shape="meters"] .cf-usage-meter:last-child:nth-child(odd) {
+  grid-column: auto;
+}
+
+.cf-usage[data-shape="meters"] .cf-usage-meter-top {
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 4px;
+}
+
+.cf-usage[data-shape="meters"] .cf-usage-meter-top .cf-usage-meter-label {
+  order: -1;
+  font-size: 10.5px;
+}
+
+.cf-usage[data-shape="meters"] .cf-usage-bar {
+  display: flex;
+  width: 20px;
+  height: 66px;
+  align-items: flex-end;
+  border-radius: 3px;
+  mask: repeating-linear-gradient(0deg, #000 0 5px, transparent 5px 7px);
+}
+
+.cf-usage[data-shape="meters"] .cf-usage-bar > span {
+  width: 100% !important;
+  min-width: 0;
+  height: calc(var(--ratio, 0) * 100%);
+  background: linear-gradient(0deg, var(--status-success), var(--status-warning) 60%, var(--status-error));
+  background-position: bottom;
+  background-size: 100% calc(100% / max(var(--ratio, 0), 0.01));
+}
+
+/* 不到一格时第一格半亮。 */
+.cf-usage[data-shape="meters"] .cf-usage-meter[data-nonzero] .cf-usage-bar > span {
+  min-height: 3px;
+}
+
+.cf-usage[data-shape="meters"] .cf-usage-meter-value {
+  font-size: 10px;
+}
+
+:root[data-skin="cockpit"] .cf-usage[data-shape="meters"] .cf-usage-bar > span {
+  background: linear-gradient(0deg, var(--status-success), var(--accent-500) 60%, var(--status-error));
+  background-position: bottom;
+  background-size: 100% calc(100% / max(var(--ratio, 0), 0.01));
 }

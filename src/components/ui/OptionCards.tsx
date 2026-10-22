@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import type { LatencyStyle, LatencyStyleSetting } from "@/utils/layouts";
+import type { CfUsageStyleSetting, LatencyStyle, LatencyStyleSetting } from "@/utils/layouts";
 import type { SkinId } from "@/utils/skin";
 import type { NodeViewMode } from "@/utils/themeSettings";
 
@@ -53,10 +53,25 @@ export const SKIN_PREVIEW: Record<SkinId, { bg: string; card: string; border: st
     radius: 6,
     barRadius: 999,
   },
+  collage: { bg: "#f3f1ec", card: "#ffffff", border: "rgba(31,35,40,0.08)", text: "#1f2328", bar1: "#2563c9", bar2: "#0f7a51", radius: 12, barRadius: 999 },
 };
+
+/** 拼贴的预览是四块不同颜色的小格子（天蓝、薄荷、杏、樱粉）。 */
+const COLLAGE_TILES = ["#cfe2ff", "#c8eedb", "#ffdcb8", "#fbcfdc"];
 
 export function SkinThumb({ skin, accent }: { skin: SkinId; accent?: string }) {
   const p = SKIN_PREVIEW[skin];
+  if (skin === "collage") {
+    return (
+      <span className="opt-thumb is-skin" style={{ background: p.bg }} aria-hidden>
+        <span className="opt-collage">
+          {COLLAGE_TILES.map((color) => (
+            <span key={color} style={{ background: color }} />
+          ))}
+        </span>
+      </span>
+    );
+  }
   return (
     <span className="opt-thumb is-skin" style={{ background: p.bg }} aria-hidden>
       <span className="opt-skin-card" style={{ background: p.card, borderColor: p.border, borderRadius: Math.min(p.radius, 5) }}>
@@ -241,6 +256,59 @@ const LATENCY_GLYPHS: Record<LatencyStyleSetting, ReactNode> = {
   ),
 };
 
+/** 「跟随风格」：左边调色盘，箭头指向右边的卡片。 */
+const FOLLOW_GLYPH = (
+  <>
+    <circle cx="11" cy="15" r="7.5" fill="currentColor" fillOpacity={0.18} />
+    <circle cx="8.5" cy="12.5" r="1.6" {...O} />
+    <circle cx="13.5" cy="11.5" r="1.6" {...O} />
+    <circle cx="10" cy="17.8" r="1.6" fill="currentColor" fillOpacity={0.55} />
+    <path d="M20.5 15h5.5m-2.3-2.6l2.6 2.6-2.6 2.6" {...LINE} strokeWidth={1.8} />
+    <rect x="28.5" y="7" width="8.5" height="16" rx="2.2" fill="currentColor" fillOpacity={0.35} />
+  </>
+);
+
+/** 站长用量的四种画法（40×30）；auto 和布局的「跟随风格」同一个图。 */
+const CF_USAGE_GLYPHS: Record<CfUsageStyleSetting, ReactNode> = {
+  auto: FOLLOW_GLYPH,
+  bars: (
+    <>
+      {[8, 14, 20].map((y, index) => (
+        <g key={y}>
+          <rect x="5" y={y} width="30" height="3.5" rx="1.75" {...SOFT} />
+          <rect x="5" y={y} width={[12, 22, 5][index]} height="3.5" rx="1.75" {...O} />
+        </g>
+      ))}
+    </>
+  ),
+  rings: (
+    <>
+      {[12, 28].map((cx, index) => (
+        <g key={cx}>
+          <circle cx={cx} cy="15" r="6.5" {...LINE} strokeOpacity={0.2} strokeWidth={3} />
+          <circle cx={cx} cy="15" r="6.5" {...LINE} strokeWidth={3} strokeDasharray={index ? "26 60" : "8 60"} transform={`rotate(-90 ${cx} 15)`} />
+        </g>
+      ))}
+    </>
+  ),
+  chars: (
+    <>
+      {[0, 1, 2, 3, 4, 5].map((index) => (
+        <rect key={index} x={4 + index * 5.4} y="12" width="4.2" height="6" fill="currentColor" fillOpacity={index < 2 ? 1 : 0.2} />
+      ))}
+    </>
+  ),
+  meters: (
+    <>
+      {[0, 1, 2, 3].map((column) =>
+        [0, 1, 2, 3, 4].map((row) => (
+          <rect key={`${column}-${row}`} x={7 + column * 7.5} y={22 - row * 4} width="5" height="3" rx="0.6" fill="currentColor" fillOpacity={row < [2, 4, 1, 3][column] ? 1 : 0.18} />
+        )),
+      )}
+    </>
+  ),
+};
+
 function Glyph({ children }: { children: ReactNode }) {
   return (
     <span className="opt-thumb" aria-hidden>
@@ -259,12 +327,24 @@ export function LatencyThumb({ style }: { style: LatencyStyleSetting | LatencySt
   return <Glyph>{LATENCY_GLYPHS[style]}</Glyph>;
 }
 
-/** 一张选项卡片：预览图 + 名字 + 一行说明，选中的蓝框打勾。 */
+export function FollowThumb() {
+  return <Glyph>{FOLLOW_GLYPH}</Glyph>;
+}
+
+export function CfUsageThumb({ style }: { style: CfUsageStyleSetting }) {
+  return <Glyph>{CF_USAGE_GLYPHS[style]}</Glyph>;
+}
+
+/**
+ * 一张选项卡片：预览图 + 名字 + 一行说明，选中的蓝框打勾。
+ * following：选的是「跟随」，这一项是跟出来的那一个 —— 虚线框，说明写「跟随中」。
+ */
 export function OptionCard({
   thumb,
   name,
   sub,
   active,
+  following = false,
   onPick,
   role = "radio",
   style,
@@ -273,12 +353,21 @@ export function OptionCard({
   name: string;
   sub?: string;
   active: boolean;
+  following?: boolean;
   onPick: () => void;
   role?: "radio" | "menuitemradio";
   style?: CSSProperties;
 }) {
   return (
-    <button type="button" role={role} aria-checked={active} className="opt-card" style={style} onClick={onPick}>
+    <button
+      type="button"
+      role={role}
+      aria-checked={active}
+      className="opt-card"
+      data-following={following ? "" : undefined}
+      style={style}
+      onClick={onPick}
+    >
       {thumb}
       <span className="opt-text">
         <span className="opt-name">{name}</span>

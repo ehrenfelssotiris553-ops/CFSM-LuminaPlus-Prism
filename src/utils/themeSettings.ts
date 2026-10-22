@@ -32,7 +32,7 @@ import {
   type CostPremiumEntry,
 } from "@/utils/cost";
 import { normalizeNodeIdentityList } from "@/utils/nodeIdentity";
-import { normalizeLatencyStyle, type LatencyStyleSetting } from "@/utils/layouts";
+import { normalizeCfUsageStyle, normalizeLatencyStyle, type CfUsageStyleSetting, type LatencyStyleSetting } from "@/utils/layouts";
 import {
   DEFAULT_MASK_FIELDS,
   normalizeMaskFields,
@@ -145,13 +145,20 @@ export const NODE_VIEW_MODES = [
   "gauge",
 ] as const;
 export type NodeViewMode = (typeof NODE_VIEW_MODES)[number];
+/** 设置里存的布局：具体的一种，或 follow = 跟随风格（每个风格配的布局，见 utils/layouts 的 followLayout）。 */
+export type NodeViewModeSetting = NodeViewMode | "follow";
 
 export interface ResolvedThemeSettings {
   defaultAppearance: Appearance;
-  desktopNodeViewMode: NodeViewMode;
-  mobileNodeViewMode: NodeViewMode;
+  desktopNodeViewMode: NodeViewModeSetting;
+  mobileNodeViewMode: NodeViewModeSetting;
   /** 六种新布局的延迟画法；auto = 每种布局用自己配的（见 utils/layouts）。 */
   latencyStyle: LatencyStyleSetting;
+  /** 站长区 CF 用量的画法；auto = 跟随风格（见 utils/layouts）。 */
+  cfUsageStyle: CfUsageStyleSetting;
+  /** 新布局同一排卡片拉成一样高（电脑）/ 所有在线卡片一样高（手机）；关着是原来各自的高度。 */
+  cardAlignDesktop: boolean;
+  cardAlignMobile: boolean;
   enableAdminButton: boolean;
   quickShowAppearance: boolean;
   quickShowViewMode: boolean;
@@ -239,9 +246,13 @@ export interface ResolvedThemeSettings {
 
 export const DEFAULT_THEME_SETTINGS: ResolvedThemeSettings = {
   defaultAppearance: "system",
-  desktopNodeViewMode: "large",
-  mobileNodeViewMode: "compact",
+  // 跟随风格：默认风格流光配的就是原版的电脑大卡片、手机小卡片。
+  desktopNodeViewMode: "follow",
+  mobileNodeViewMode: "follow",
   latencyStyle: "auto",
+  cfUsageStyle: "auto",
+  cardAlignDesktop: false,
+  cardAlignMobile: false,
   enableAdminButton: true,
   quickShowAppearance: true,
   quickShowViewMode: true,
@@ -364,9 +375,9 @@ export function isNodeViewMode(value: unknown): value is NodeViewMode {
 
 function normalizeNodeViewMode(
   value: unknown,
-  fallback: NodeViewMode,
-): NodeViewMode {
-  if (isNodeViewMode(value)) return value;
+  fallback: NodeViewModeSetting,
+): NodeViewModeSetting {
+  if (value === "follow" || isNodeViewMode(value)) return value;
   // 未知旧字符串统一落到小卡，避免升级后出现无选中项。
   return typeof value === "string" && value.length > 0 ? "compact" : fallback;
 }
@@ -375,8 +386,8 @@ function normalizeNodeViewMode(
 // (历史值/外部写入)也归一化回默认档,避免管理页无选中项、首页又强制回落 compact 的不一致。
 function normalizeMobileNodeViewMode(
   value: unknown,
-  fallback: NodeViewMode,
-): NodeViewMode {
+  fallback: NodeViewModeSetting,
+): NodeViewModeSetting {
   const mode = normalizeNodeViewMode(value, fallback);
   return mode === "list" ? fallback : mode;
 }
@@ -424,6 +435,9 @@ export function normalizeThemeSettings(
       DEFAULT_THEME_SETTINGS.mobileNodeViewMode,
     ),
     latencyStyle: normalizeLatencyStyle(settings?.latencyStyle),
+    cfUsageStyle: normalizeCfUsageStyle(settings?.cfUsageStyle),
+    cardAlignDesktop: settings?.cardAlignDesktop === true,
+    cardAlignMobile: settings?.cardAlignMobile === true,
     enableAdminButton: enabledUnlessFalse(settings?.enableAdminButton),
     quickShowAppearance: enabledUnlessFalse(settings?.quickShowAppearance),
     quickShowViewMode: enabledUnlessFalse(settings?.quickShowViewMode),

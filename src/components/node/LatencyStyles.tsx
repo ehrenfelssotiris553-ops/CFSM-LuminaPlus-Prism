@@ -8,14 +8,16 @@ import { LatencyBars } from "./LatencyBars";
 import { PingLineSwitcher } from "./PingLineSwitcher";
 
 /*
- * 六种新布局的延迟画法（设置「延迟样式」，见 utils/layouts）。每种都能看到最近一段时间的走势：
- *   capsule 走势胶囊：两列小胶囊，大数字配一条平滑走势线
- *   compare 对比条：条越短越快，浅色段是这段时间的波动范围，右边一条小走势线
- *   histo   柱状历史：高柱子（和经典卡片同一套柱子），另外写平均和抖动
- *   tiles   信号方块：每条线路一个方块，信号格越满越快，底下衬走势
- *   status  状态色条：绿黄红小格子，像服务状态页
- *   scope   示波器：红黄绿分区的走势窗，越往上越慢，右边箭头指着当前值
- * 只用 SVG 和 CSS（状态色条一条线路一个元素，靠渐变画格子），格数和经典卡片一样（HOMEPAGE_PING_BUCKET_COUNT）。
+ * 六种新布局的延迟画法（设置「延迟样式」，见 utils/layouts）。每种都能看到最近一段时间的走势，
+ * 每种还配一种丢包图，和延迟走势按时间对齐（同一格就是同一段时间）：
+ *   capsule 走势胶囊：两列小胶囊，大数字配一条平滑走势线；丢包是走势下面的「倒影」，从基线往下垂
+ *   compare 对比条：条越短越快，浅色段是这段时间的波动范围，右边一条小走势线；下面一根细条比谁丢得多
+ *   histo   柱状历史：高柱子（和经典卡片同一套柱子），另外写平均和抖动；丢包柱往下，上下成一条波形
+ *   tiles   信号方块：每条线路一个方块，信号格越满越快，底下衬走势；最底下一排圆点，丢包的点变大变色
+ *   status  状态色条：绿黄红小格子，像服务状态页；上轨延迟、下轨丢包
+ *   scope   示波器：红黄绿分区的走势窗，越往上越慢，右边箭头指着当前值；丢包是从底部冲上来的脉冲
+ * 只用 SVG 和 CSS：没丢包的格子不画元素（整行一段渐变），只给丢了包的那几格画柱子，几十张卡片也不多几个节点。
+ * 格数和经典卡片一样（HOMEPAGE_PING_BUCKET_COUNT）。颜色、圆角、光效跟着风格（styles/layout-cards.css 末尾）。
  */
 
 export interface LatLine {
@@ -128,6 +130,104 @@ function lossColor(loss: number | null) {
   return loss >= 2 ? "var(--status-error)" : "var(--status-warning)";
 }
 
+// ---------- 丢包图 ----------
+
+type LossTone = "none" | "ok" | "warn" | "bad";
+
+/** 这一格的丢包档：没数据 / 没丢 / 丢了一点（2% 以下）/ 丢得多。整格都在掉线之后算丢得多。 */
+function lossTone(bucket: PingOverviewBucket): LossTone {
+  if (bucket.offline) return "bad";
+  if (bucket.loss == null) return "none";
+  if (bucket.loss <= 0) return "ok";
+  return bucket.loss >= 2 ? "bad" : "warn";
+}
+
+/** 丢包柱的高度（0～1）：没丢不画，丢得越多越高，10% 封顶。 */
+function lossLevel(bucket: PingOverviewBucket): number {
+  if (bucket.offline) return 1;
+  return bucket.loss != null && bucket.loss > 0 ? Math.min(bucket.loss, 10) / 10 : 0;
+}
+
+const TONE_COLOR: Record<LossTone, string> = {
+  none: "var(--loss-none)",
+  ok: "var(--loss-ok)",
+  warn: "var(--loss-warn)",
+  bad: "var(--loss-bad)",
+};
+
+/** 一行格子一段硬边渐变（和状态色条同一种画法），格子之间的缝靠 mask 切（--n）。 */
+function toneGradient(tones: LossTone[]): string {
+  const n = tones.length || 1;
+  return `linear-gradient(90deg, ${tones
+    .map((tone, index) => `${TONE_COLOR[tone]} ${((index / n) * 100).toFixed(2)}% ${(((index + 1) / n) * 100).toFixed(2)}%`)
+    .join(", ")})`;
+}
+
+/** 丢了包的那几格：x 和走势线的点对齐（第 i 格在 i / (n-1)）。 */
+function lossMarks(buckets: PingOverviewBucket[]) {
+  const step = buckets.length > 1 ? 100 / (buckets.length - 1) : 0;
+  const marks: { x: number; level: number; tone: LossTone }[] = [];
+  buckets.forEach((bucket, index) => {
+    const level = lossLevel(bucket);
+    if (level > 0) marks.push({ x: index * step, level, tone: lossTone(bucket) });
+  });
+  return marks;
+}
+
+/** 走势胶囊的「倒影」：一条基线，丢包时从基线往下垂一小截。 */
+function LossDrops({ buckets }: { buckets: PingOverviewBucket[] }) {
+  const marks = useMemo(() => lossMarks(buckets), [buckets]);
+  return (
+    <svg className="lc-loss-drops" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden>
+      <line x1="0" y1="0.5" x2="100" y2="0.5" className="lc-loss-base" />
+      {marks.map((mark) => (
+        <rect key={mark.x} x={Math.min(98.6, Math.max(0, mark.x - 0.7))} y="1" width="1.4" height={2.5 + mark.level * 6.5} className="lc-loss-mark" data-tone={mark.tone} />
+      ))}
+    </svg>
+  );
+}
+
+/** 柱状历史下面的丢包柱：和上面的柱子同一套格子（同样 2px 缝），没丢包的格子只有一小截底线。 */
+function LossWave({ buckets }: { buckets: PingOverviewBucket[] }) {
+  const n = buckets.length || 1;
+  const tones = useMemo(() => buckets.map(lossTone), [buckets]);
+  return (
+    <span className="lc-loss-wave" style={{ "--n": n } as CSSProperties} aria-hidden>
+      <span className="lc-loss-stubs" style={{ background: toneGradient(tones) }} />
+      {buckets.map((bucket, index) => {
+        const level = lossLevel(bucket);
+        return level > 0 ? (
+          <i key={index} className="lc-loss-mark" data-tone={tones[index]} style={{ gridColumn: index + 1, height: `${3 + level * 7}px` }} />
+        ) : null;
+      })}
+    </span>
+  );
+}
+
+const DOT_COUNT = 10;
+
+/** 信号方块底部一排圆点：几格并成一个点（取最差的那格），丢包的点大一圈。整排一个元素，靠多层径向渐变画点。 */
+function LossDots({ buckets }: { buckets: PingOverviewBucket[] }) {
+  const background = useMemo(() => {
+    const per = Math.max(1, Math.ceil(buckets.length / DOT_COUNT));
+    const order: LossTone[] = ["none", "ok", "warn", "bad"];
+    const dots: LossTone[] = [];
+    for (let start = 0; start < buckets.length; start += per) {
+      const group = buckets.slice(start, start + per).map(lossTone);
+      dots.push(group.reduce((worst, tone) => (order.indexOf(tone) > order.indexOf(worst) ? tone : worst), "none" as LossTone));
+    }
+    const count = dots.length || 1;
+    return dots
+      .map((tone, index) => {
+        const radius = tone === "warn" || tone === "bad" ? 3.5 : 2.5;
+        const position = count > 1 ? (index / (count - 1)) * 100 : 50;
+        return `radial-gradient(circle, ${TONE_COLOR[tone]} ${radius}px, transparent ${radius + 0.6}px) ${position.toFixed(2)}% 50% / ${(100 / count).toFixed(2)}% 100% no-repeat`;
+      })
+      .join(", ");
+  }, [buckets]);
+  return <span className="lc-loss-dots" style={{ background }} aria-hidden />;
+}
+
 /** 线路名：多线路时点一下可以换这一行显示的线路（和经典卡片同一个菜单）。 */
 function LineName({ uuid, line }: { uuid: string; line: LatLine }) {
   if (line.slot != null) {
@@ -204,7 +304,10 @@ function Capsules({ uuid, lines, stats }: StyleProps) {
           </span>
           <span className="lc-lat-row is-bottom">
             <Ms line={line} />
-            <Spark line={line} stats={stats[index]!} className="lc-lat-spark" />
+            <span className="lc-lat-spark-col">
+              <Spark line={line} stats={stats[index]!} className="lc-lat-spark" />
+              <LossDrops buckets={line.buckets} />
+            </span>
           </span>
         </div>
       ))}
@@ -225,9 +328,16 @@ function Compare({ uuid, lines, stats }: StyleProps) {
         return (
           <div key={line.key} className="lc-lat-compare">
             <LineName uuid={uuid} line={line} />
-            <span className="lc-cmp-track" style={{ "--lat": color } as CSSProperties} aria-hidden>
-              {s.count ? <span className="lc-cmp-band" style={{ left: `${bandLeft}%`, width: `${Math.min(100 - bandLeft, bandWidth)}%` }} /> : null}
-              <span className="lc-cmp-fill" style={{ width: `${fill}%` }} />
+            <span className="lc-cmp-tracks" aria-hidden>
+              <span className="lc-cmp-track" style={{ "--lat": color } as CSSProperties}>
+                {s.count ? <span className="lc-cmp-band" style={{ left: `${bandLeft}%`, width: `${Math.min(100 - bandLeft, bandWidth)}%` }} /> : null}
+                <span className="lc-cmp-fill" style={{ width: `${fill}%` }} />
+              </span>
+              <span className="lc-cmp-loss" data-zero={line.loss === 0 ? "" : undefined}>
+                {line.loss != null && line.loss > 0 ? (
+                  <span style={{ width: `${Math.max(4, Math.min(100, (line.loss / 5) * 100))}%`, background: lossColor(line.loss) }} />
+                ) : null}
+              </span>
             </span>
             <Spark line={line} stats={s} className="lc-cmp-spark" />
             <span className="lc-cmp-num">
@@ -262,6 +372,7 @@ function Histo({ uuid, lines, stats, redrawKey }: StyleProps) {
             </span>
             <span className="lc-histo-bars">
               <LatencyBars buckets={line.buckets} redrawKey={redrawKey} height={22} />
+              <LossWave buckets={line.buckets} />
             </span>
           </div>
         );
@@ -299,6 +410,7 @@ function Tiles({ uuid, lines, stats }: StyleProps) {
             <span className="lc-loss tabular" style={{ color: lossColor(line.loss) }}>
               {t("lat.loss", { v: lossText(line.loss) })}
             </span>
+            <LossDots buckets={line.buckets} />
           </div>
         );
       })}
@@ -309,7 +421,7 @@ function Tiles({ uuid, lines, stats }: StyleProps) {
 function tickColor(bucket: PingOverviewBucket) {
   if (bucket.offline) return "var(--status-error)";
   if (bucket.value == null) return "var(--progress-bg)";
-  if ((bucket.loss ?? 0) >= 2 || bucket.value >= 200) return "var(--status-error)";
+  if (bucket.value >= 200) return "var(--status-error)";
   if (bucket.value >= 100) return "var(--status-warning)";
   return "var(--status-success)";
 }
@@ -328,11 +440,10 @@ function Status({ uuid, lines }: StyleProps) {
       {lines.map((line) => (
         <div key={line.key} className="lc-lat-status">
           <LineName uuid={uuid} line={line} />
-          <span
-            className="lc-status-strip"
-            style={{ background: statusBackground(line.buckets), "--n": line.buckets.length || 1 } as CSSProperties}
-            aria-hidden
-          />
+          <span className="lc-status-tracks" aria-hidden>
+            <span className="lc-status-strip" style={{ background: statusBackground(line.buckets), "--n": line.buckets.length || 1 } as CSSProperties} />
+            <span className="lc-status-strip is-loss" style={{ background: toneGradient(line.buckets.map(lossTone)), "--n": line.buckets.length || 1 } as CSSProperties} />
+          </span>
           <Ms line={line} />
           <span className="lc-loss tabular" style={{ color: lossColor(line.loss) }}>
             {lossText(line.loss)}
@@ -358,6 +469,7 @@ function Scope({ uuid, lines }: StyleProps) {
     <div className="lc-lat-rows is-scope">
       {lines.map((line) => {
         const points = tracePoints(line.buckets, 100, scopeY);
+        const pulses = lossMarks(line.buckets);
         const color = latencyHeatColor(line.value);
         return (
           <div key={line.key} className="lc-lat-scope">
@@ -370,8 +482,15 @@ function Scope({ uuid, lines }: StyleProps) {
                 <line x1="25" y1="0" x2="25" y2="30" className="lc-scope-grid" />
                 <line x1="50" y1="0" x2="50" y2="30" className="lc-scope-grid" />
                 <line x1="75" y1="0" x2="75" y2="30" className="lc-scope-grid" />
+                {pulses.map((pulse) => (
+                  <rect key={pulse.x} x={Math.min(98.4, Math.max(0, pulse.x - 0.8))} y={26 - pulse.level * 12} width="1.6" height={4 + pulse.level * 12} className="lc-loss-mark" data-tone={pulse.tone} />
+                ))}
                 {points.length > 1 ? <polyline points={points.join(" ")} className="lc-scope-trace" /> : null}
               </svg>
+              <span className="lc-scope-ch" aria-hidden>
+                <span style={{ color }}>{t("lat.chLatency")}</span>
+                <span>{t("lat.chLoss")}</span>
+              </span>
               {line.value != null ? <i className="lc-scope-pointer" style={{ top: `${((scopeY(line.value) / 30) * 100).toFixed(1)}%` }} /> : null}
             </span>
             <span className="lc-scope-read">

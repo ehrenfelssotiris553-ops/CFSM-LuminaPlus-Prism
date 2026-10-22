@@ -121,14 +121,14 @@ import {
   withPreferredAppearance,
   NODE_VIEW_MODES,
   type NodeViewMode,
+  type NodeViewModeSetting,
   type ResolvedThemeSettings,
 } from "@/utils/themeSettings";
-import { LayoutIcon } from "@/components/node/LayoutIcon";
-import { LATENCY_STYLE_OPTIONS, LAYOUT_PAIRS } from "@/utils/layouts";
-import { LatencyThumb, LayoutThumb, OptionCard } from "@/components/ui/OptionCards";
+import { CF_USAGE_STYLE_OPTIONS, LATENCY_STYLE_OPTIONS, resolveCfUsageStyle, resolveNodeViewMode } from "@/utils/layouts";
+import { CfUsageThumb, FollowThumb, LatencyThumb, LayoutThumb, OptionCard } from "@/components/ui/OptionCards";
 import { OwnerOnlyNotice, ScopeBadge, SettingsPreview, SettingsSearch, type SettingsIndexEntry } from "@/components/theme/SettingsParts";
 import { RegionTabs } from "@/components/node/RegionTabs";
-import { clearViewModeOverrides } from "@/hooks/useViewMode";
+import { followLayoutText } from "@/components/shell/QuickMenus";
 import {
   getDefaultOverviewRatingLabelText,
   type OverviewRatingKind,
@@ -400,6 +400,9 @@ function pickManagedThemeSettings(settings: ResolvedThemeSettings) {
     skinNumericFont: settings.skinNumericFont,
     mySkin: settings.mySkin,
     latencyStyle: settings.latencyStyle,
+    cfUsageStyle: settings.cfUsageStyle,
+    cardAlignDesktop: settings.cardAlignDesktop,
+    cardAlignMobile: settings.cardAlignMobile,
     screenshotMaskFields: settings.screenshotMaskFields,
     screenshotMaskNodes: settings.screenshotMaskNodes,
     screenshotMaskMode: settings.screenshotMaskMode,
@@ -939,9 +942,10 @@ const SETTINGS_INDEX: readonly SettingsIndexEntry[] = [
   { id: "set-skin", tab: "appearance", title: "skin.title", words: ["skin.accent", "skin.radius", "skin.density", "skin.numericFont", "skin.mine"] },
   { id: "set-appearance", tab: "appearance", title: "settings.defaultAppearance", words: ["appearance.light", "appearance.dark"] },
   { id: "set-opacity", tab: "appearance", title: "settings.cardOpacityTitle" },
-  { id: "set-view", tab: "layout", title: "settings.defaultView", words: ["layout.pairs", "settings.desktopDefault", "settings.mobileDefault"] },
+  { id: "set-cf-style", tab: "appearance", title: "cfStyle.title", words: ["cfStyle.name.bars", "cfStyle.name.rings", "cfStyle.name.chars", "cfStyle.name.meters"] },
+  { id: "set-view", tab: "layout", title: "settings.defaultView", words: ["layout.follow", "settings.desktopDefault", "settings.mobileDefault"] },
   { id: "set-latency", tab: "layout", title: "lat.setting", words: ["lat.name.capsule", "lat.name.compare", "lat.name.histo", "lat.name.tiles", "lat.name.status", "lat.name.scope"] },
-  { id: "set-card", tab: "layout", title: "settings.cardItems", words: ["settings.showConnections", "settings.showTrafficTotal", "settings.showBilling", "settings.showUptime", "settings.showCardGroup"] },
+  { id: "set-card", tab: "layout", title: "settings.cardItems", words: ["settings.showConnections", "settings.showTrafficTotal", "settings.showBilling", "settings.showUptime", "settings.showCardGroup", "settings.cardAlign"] },
   { id: "set-ip-stack", tab: "layout", title: "settings.ipStackTitle", words: ["settings.showIpv4", "settings.showIpv6", "settings.showIpStackFilter"] },
   { id: "set-home-display", tab: "home", title: "settings.homeDisplay", words: ["settings.showOverview", "settings.phoneOverviewStrip", "settings.showGroupTabs", "settings.showRegionTabs"] },
   { id: "set-home-sort", tab: "home", title: "settings.sortAndGroup", words: ["settings.enableSort", "settings.groupOrder", "settings.regionOrder", "settings.defaultGroup"] },
@@ -965,14 +969,20 @@ function LayoutPicker({
   hint,
   options,
   value,
+  skin,
+  device,
   onPick,
 }: {
   title: string;
   hint: string;
   options: readonly { value: NodeViewMode; label: string }[];
-  value: NodeViewMode;
-  onPick: (mode: NodeViewMode) => void;
+  value: NodeViewModeSetting;
+  skin: SkinId;
+  device: "desktop" | "mobile";
+  onPick: (mode: NodeViewModeSetting) => void;
 }) {
+  const follows = value === "follow";
+  const effective = resolveNodeViewMode(value, skin, device);
   return (
     <div>
       <div className="setting-subhead">
@@ -980,16 +990,28 @@ function LayoutPicker({
         <span className="setting-hint">{hint}</span>
       </div>
       <div className="opt-grid is-settings mt-2" role="radiogroup" aria-label={title}>
-        {options.map((option) => (
-          <OptionCard
-            key={option.value}
-            thumb={<LayoutThumb mode={option.value} />}
-            name={option.label}
-            sub={t(`viewModeSub.${option.value}` as MessageKey)}
-            active={value === option.value}
-            onPick={() => onPick(option.value)}
-          />
-        ))}
+        <OptionCard
+          thumb={<FollowThumb />}
+          name={t("layout.follow")}
+          sub={followLayoutText(skin, device)}
+          active={follows}
+          style={{ gridColumn: "1 / -1" }}
+          onPick={() => onPick("follow")}
+        />
+        {options.map((option) => {
+          const following = follows && effective === option.value;
+          return (
+            <OptionCard
+              key={option.value}
+              thumb={<LayoutThumb mode={option.value} />}
+              name={option.label}
+              sub={following ? t("layout.following") : t(`viewModeSub.${option.value}` as MessageKey)}
+              active={value === option.value}
+              following={following}
+              onPick={() => onPick(option.value)}
+            />
+          );
+        })}
       </div>
     </div>
   );
@@ -1125,12 +1147,6 @@ export function ThemeManage() {
       ...(next.density !== undefined ? { skinDensity: next.density } : null),
       ...(next.numericFont !== undefined ? { skinNumericFont: next.numericFont } : null),
     }));
-  }, []);
-  // 「推荐搭配」一键套用：电脑和手机的默认布局 + 风格一起换；这个标签页里用快捷栏临时选过的布局也清掉，首页才会跟着变。
-  const applyLayoutPair = useCallback((mode: NodeViewMode, skin: SkinId) => {
-    editVersionRef.current += 1;
-    setDraft((prev) => ({ ...prev, desktopNodeViewMode: mode, mobileNodeViewMode: mode, skin }));
-    clearViewModeOverrides();
   }, []);
   // 绑定关系的三个入口(勾选/全选/清空)都是基于前值的函数式更新,单独收口。
   const patchBindings = useCallback(
@@ -1853,6 +1869,38 @@ export function ThemeManage() {
                 />
               </InstancePanel>
               <InstancePanel
+                id="set-cf-style"
+                titleAction={<ScopeBadge kind="owner" />}
+                title={t("cfStyle.title")}
+                aside={<Gauge size={16} />}
+                description={t("cfStyle.desc")}
+              >
+                <div className="opt-grid is-settings" role="radiogroup" aria-label={t("cfStyle.title")}>
+                  {CF_USAGE_STYLE_OPTIONS.map((style) => {
+                    const now = resolveCfUsageStyle(draft.cfUsageStyle, draft.skin);
+                    const following = draft.cfUsageStyle === "auto" && style === now;
+                    return (
+                      <OptionCard
+                        key={style}
+                        thumb={<CfUsageThumb style={style} />}
+                        name={t(`cfStyle.name.${style}` as MessageKey)}
+                        sub={
+                          style === "auto"
+                            ? t("cfStyle.followNow", { v: t(`cfStyle.name.${now}` as MessageKey) })
+                            : following
+                              ? t("layout.following")
+                              : t(`cfStyle.sub.${style}` as MessageKey)
+                        }
+                        active={draft.cfUsageStyle === style}
+                        following={following}
+                        style={style === "auto" ? { gridColumn: "1 / -1" } : undefined}
+                        onPick={() => patch("cfUsageStyle", style)}
+                      />
+                    );
+                  })}
+                </div>
+              </InstancePanel>
+              <InstancePanel
                 id="set-appearance"
                 titleAction={<ScopeBadge kind="visitor" />}
                 title={t("settings.defaultAppearance")}
@@ -1938,6 +1986,8 @@ export function ThemeManage() {
                     hint={t("settings.desktopDefaultHint")}
                     options={NODE_VIEW_MODE_OPTIONS}
                     value={draft.desktopNodeViewMode}
+                    skin={draft.skin}
+                    device="desktop"
                     onPick={(mode) => patch("desktopNodeViewMode", mode)}
                   />
                   <LayoutPicker
@@ -1945,37 +1995,10 @@ export function ThemeManage() {
                     hint={t("settings.mobileDefaultHint")}
                     options={MOBILE_VIEW_MODE_OPTIONS}
                     value={draft.mobileNodeViewMode}
+                    skin={draft.skin}
+                    device="mobile"
                     onPick={(mode) => patch("mobileNodeViewMode", mode)}
                   />
-                </div>
-                <div className="mt-4">
-                  <div className="setting-subhead">
-                    <span className="setting-subhead-title">{t("layout.pairs")}</span>
-                  </div>
-                  <div className="layout-pairs">
-                    {LAYOUT_PAIRS.map(([mode, skin]) => {
-                      const active =
-                        draft.desktopNodeViewMode === mode &&
-                        draft.mobileNodeViewMode === mode &&
-                        draft.skin === skin;
-                      return (
-                        <button
-                          key={mode}
-                          type="button"
-                          className="layout-pair"
-                          aria-pressed={active}
-                          onClick={() => applyLayoutPair(mode, skin)}
-                        >
-                          <LayoutIcon mode={mode} size={16} />
-                          <span className="layout-pair-text">
-                            <b>{t(`viewMode.${mode}` as MessageKey)}</b>
-                            <small>{t("layout.withSkin", { skin: t(`skin.name.${skin}` as MessageKey) })}</small>
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="mt-2 setting-hint">{t("layout.pairsHint")}</p>
                 </div>
               </InstancePanel>
               <InstancePanel
@@ -2025,6 +2048,28 @@ export function ThemeManage() {
                       title={t("settings.showCardGroup")}
                       desc={t("settings.showCardGroupDesc")}
                       checked={draft.showCardGroup}
+                      onPatch={patch}
+                    />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <div className="setting-subhead">
+                    <span className="setting-subhead-title">{t("settings.cardAlign")}</span>
+                    <span className="setting-hint">{t("settings.cardAlignHint")}</span>
+                  </div>
+                  <div className="mt-2 grid gap-3 md:grid-cols-2">
+                    <ToggleRow
+                      field="cardAlignDesktop"
+                      title={t("settings.cardAlignDesktop")}
+                      desc={t("settings.cardAlignDesktopDesc")}
+                      checked={draft.cardAlignDesktop}
+                      onPatch={patch}
+                    />
+                    <ToggleRow
+                      field="cardAlignMobile"
+                      title={t("settings.cardAlignMobile")}
+                      desc={t("settings.cardAlignMobileDesc")}
+                      checked={draft.cardAlignMobile}
                       onPatch={patch}
                     />
                   </div>
@@ -3044,8 +3089,8 @@ export function ThemeManage() {
         </div>
         <SettingsPreview
           skin={draft.skin}
-          desktopMode={draft.desktopNodeViewMode}
-          mobileMode={draft.mobileNodeViewMode}
+          desktopMode={resolveNodeViewMode(draft.desktopNodeViewMode, draft.skin, "desktop")}
+          mobileMode={resolveNodeViewMode(draft.mobileNodeViewMode, draft.skin, "mobile")}
           latencyStyle={draft.latencyStyle}
         />
       </div>

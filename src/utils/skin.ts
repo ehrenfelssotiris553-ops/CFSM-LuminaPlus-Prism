@@ -6,7 +6,7 @@
  * 和其它主题设置一样：站长的选择同步到后端成为全站默认，访客改了只留在自己的浏览器。
  */
 
-export const SKIN_IDS = ["lumina", "paper", "frost", "terminal", "aurora", "cockpit"] as const;
+export const SKIN_IDS = ["lumina", "paper", "frost", "terminal", "aurora", "cockpit", "collage"] as const;
 export type SkinId = (typeof SKIN_IDS)[number];
 
 export const SKIN_RADII = ["auto", "none", "sm", "md", "lg"] as const;

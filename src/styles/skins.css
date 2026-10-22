@@ -422,6 +422,119 @@
   filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent-500) 55%, transparent));
 }
 
+/* ---------- 拼贴：每格一种柔和底色，像手机桌面小组件（配便当盒） ---------- */
+
+:root[data-skin="collage"] {
+  --radius-scale: 1.55;
+}
+
+:root[data-skin="collage"]:not([data-appearance="dark"]) {
+  --bg-0: #f3f1ec;
+  --surface: #ffffff;
+  --surface-elev: #ffffff;
+  --surface-sunken: #f5f3ef;
+  --border: rgba(31, 35, 40, 0.06);
+  --border-subtle: #ece9e3;
+  --border-strong: #d9d5cc;
+  --hairline: #ebe8e2;
+  --text-primary: #1f2328;
+  --text-secondary: #424850;
+  --text-tertiary: #646a73;
+  --fill-secondary: rgba(31, 35, 40, 0.08);
+  --fill-tertiary: rgba(31, 35, 40, 0.04);
+  --hover-bg: #f1eee8;
+  --progress-bg: #ebe8e2;
+  /* 指标色就是各格的颜色：CPU 天蓝、内存薄荷、磁盘杏、网速樱粉、交换 / 流量丁香、负载柠檬。 */
+  --progress-cpu: #2563c9;
+  --progress-memory: #0f7a51;
+  --progress-swap: #5b3fd0;
+  --progress-disk: #b45a0a;
+  --progress-network: #c2335f;
+  --progress-load: #866a04;
+  --tint-sky: #2563c9;
+  --tint-mint: #0f7a51;
+  --tint-apricot: #b45a0a;
+  --tint-sakura: #c2335f;
+  --tint-lilac: #5b3fd0;
+  --tint-lemon: #866a04;
+  /* 选中用墨黑，让彩色格子当主角。 */
+  --accent-500: #1f2328;
+  --accent-strong: #0d1014;
+  --ring: rgba(31, 35, 40, 0.25);
+  --traffic-up: #424850;
+  --traffic-down: #2563c9;
+  --tag-gray-bg: #efece6;
+  --tag-gray-fg: #424850;
+  --canvas-glow: none;
+  --skin-card-shadow: 0 1px 2px rgba(31, 35, 40, 0.05), 0 10px 24px -14px rgba(31, 35, 40, 0.22);
+}
+
+:root[data-skin="collage"][data-appearance="dark"] {
+  --bg-0: #111214;
+  --canvas-glow: none;
+  --surface: #1b1c20;
+  --surface-elev: #222328;
+  --surface-sunken: #16171a;
+  --border: rgba(255, 255, 255, 0.06);
+  --border-subtle: #24252a;
+  --border-strong: #34363d;
+  --hairline: #2a2b31;
+  --text-primary: #f1f2f4;
+  --text-secondary: #c4c8ce;
+  --text-tertiary: #959aa3;
+  --fill-secondary: rgba(255, 255, 255, 0.08);
+  --fill-tertiary: rgba(255, 255, 255, 0.04);
+  --hover-bg: #24252a;
+  --progress-bg: #2a2b31;
+  --progress-cpu: #86b6ff;
+  --progress-memory: #56d6a0;
+  --progress-swap: #ad99ff;
+  --progress-disk: #f7aa62;
+  --progress-network: #f487aa;
+  --progress-load: #e9d063;
+  --tint-sky: #86b6ff;
+  --tint-mint: #56d6a0;
+  --tint-apricot: #f7aa62;
+  --tint-sakura: #f487aa;
+  --tint-lilac: #ad99ff;
+  --tint-lemon: #e9d063;
+  --accent-500: #f1f2f4;
+  --accent-strong: #ffffff;
+  --text-on-strong: #111214;
+  --ring: rgba(255, 255, 255, 0.3);
+  --traffic-up: #c4c8ce;
+  --traffic-down: #86b6ff;
+  --tag-gray-bg: #26272c;
+  --tag-gray-fg: #c4c8ce;
+  --skin-card-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 24px -14px rgba(0, 0, 0, 0.7);
+}
+
+/* 没有描边，只靠柔和阴影浮起来。 */
+:root[data-skin="collage"] :is(.server-card, .compact-node-card, .mini-node-card, .node-list-scroll, .lc-card, .overview-card, .owner-strip) {
+  border-color: transparent;
+  box-shadow: var(--skin-card-shadow);
+}
+
+/* 便当盒每一格用自己指标的颜色淡淡打底（指标配色改过也跟着变）；续费那格提醒时照旧黄、红。 */
+:root[data-skin="collage"] .lc-tile[data-tint] {
+  background: color-mix(in srgb, var(--tile-c) 12%, var(--surface-a));
+}
+
+:root[data-skin="collage"][data-appearance="dark"] .lc-tile[data-tint] {
+  background: color-mix(in srgb, var(--tile-c) 15%, var(--surface-a));
+}
+
+:root[data-skin="collage"] .lc-tile[data-tint] .lc-label {
+  color: var(--tile-c);
+}
+
+:root[data-skin="collage"] .lc-tile[data-tint="net"] { --tile-c: var(--progress-network); }
+:root[data-skin="collage"] .lc-tile[data-tint="cpu"] { --tile-c: var(--progress-cpu); }
+:root[data-skin="collage"] .lc-tile[data-tint="mem"] { --tile-c: var(--progress-memory); }
+:root[data-skin="collage"] .lc-tile[data-tint="disk"] { --tile-c: var(--progress-disk); }
+:root[data-skin="collage"] .lc-tile[data-tint="quota"] { --tile-c: var(--progress-swap); }
+:root[data-skin="collage"] .lc-tile[data-tint="misc"] { --tile-c: var(--progress-load); }
+
 /* ---------- 自定义：主色、圆角、疏密、数字字体（写在风格后面，压过风格自带的值） ---------- */
 
 /* 主色：只改界面强调色（选中态、按钮、复选框），不改数据配色。深色下调亮一点保证对比度。 */
@@ -637,67 +750,4 @@
 .skin-accent.is-auto[aria-pressed="true"] {
   border-color: var(--accent-500);
   color: var(--text-primary);
-}
-
-/* ---------- 设置页的卡片布局选择、推荐搭配 ---------- */
-
-.instance-segmented.is-prominent.layout-options {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 104px), 1fr));
-}
-
-.instance-segmented.layout-options button {
-  min-width: 0;
-  padding: 0 6px;
-  white-space: nowrap;
-}
-
-.layout-pairs {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
-  gap: 8px;
-}
-
-.layout-pair {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: calc(12px * var(--radius-scale, 1));
-  background: var(--surface-a);
-  color: var(--text-secondary);
-  text-align: left;
-  cursor: pointer;
-}
-
-.layout-pair:hover {
-  background: var(--hover-bg-a);
-}
-
-.layout-pair[aria-pressed="true"] {
-  border-color: color-mix(in srgb, var(--accent-500) 50%, var(--border));
-  background: color-mix(in srgb, var(--accent-500) 9%, var(--surface-elev));
-  color: var(--text-primary);
-}
-
-.layout-pair-text {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-}
-
-.layout-pair-text b {
-  color: var(--text-primary);
-  font-size: 13px;
-  font-weight: 650;
-}
-
-.layout-pair-text small {
-  overflow: hidden;
-  color: var(--text-tertiary);
-  font-size: 11.5px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }

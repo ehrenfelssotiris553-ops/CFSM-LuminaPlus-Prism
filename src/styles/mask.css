@@ -57,7 +57,7 @@
 .mask-reveal[aria-pressed="true"] {
   border-color: transparent;
   background: var(--accent-500);
-  color: #fff;
+  color: var(--text-on-strong);
 }
 
 .mask-reveal:focus-visible {

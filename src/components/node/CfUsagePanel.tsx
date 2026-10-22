@@ -4,6 +4,7 @@ import { RefreshCw } from "lucide-react";
 import { getLocale, memoByLanguage, t, type MessageKey } from "@/i18n";
 import { useCfUsage } from "@/hooks/useCfUsage";
 import { useMinuteClock } from "@/hooks/useClock";
+import { useThemeSettings } from "@/hooks/useThemeSettings";
 import { getAdminUrl } from "@/services/cfsm/config";
 import type { CfUsageDay } from "@/types/cfsm";
 import {
@@ -13,6 +14,7 @@ import {
   formatCfUsagePercent,
   type CfUsageMetric,
 } from "@/utils/cfUsage";
+import { resolveCfUsageStyle } from "@/utils/layouts";
 
 type UsageDay = "today" | "yesterday";
 
@@ -91,6 +93,7 @@ function UsageError({ error }: { error: unknown }) {
  */
 export function CfUsagePanel() {
   const { visible, mode, query } = useCfUsage();
+  const { cfUsageStyle, skin } = useThemeSettings();
   const [day, setDay] = useState<UsageDay>("today");
   const hasData = query.data !== undefined;
   const now = useMinuteClock(visible && hasData);
@@ -101,7 +104,8 @@ export function CfUsagePanel() {
   const locale = getLocale();
 
   return (
-    <section className="cf-usage" aria-label={t("cfUsage.title")} aria-busy={fetching}>
+    // data-shape：横条 / 小圆环 / 字符格 / 电平表（设置「站长用量」，跟随风格时按风格配），画法见 styles/page-skins.css。
+    <section className="cf-usage" data-shape={resolveCfUsageStyle(cfUsageStyle, skin)} aria-label={t("cfUsage.title")} aria-busy={fetching}>
       <div className="cf-usage-head">
         <span className="overview-card-label">{t("cfUsage.title")}</span>
         {hasData ? (
@@ -144,7 +148,9 @@ export function CfUsagePanel() {
               key={meter.metric}
               className="cf-usage-meter"
               data-level={meter.level}
-              // 各风格画法不同（圆环、竖电平表…），都从 --ratio 取比例，见 styles/page-skins.css。
+              // 用了一点点也要画出一小段（见 styles/page-skins.css）。
+              data-nonzero={meter.ratio > 0 ? "" : undefined}
+              // 几种画法（横条、圆环、竖电平表…）都从 --ratio 取比例。
               style={{ "--ratio": Math.min(1, meter.ratio) } as CSSProperties}
               title={meterTitle(meter.metric, query.data?.[day])}
             >

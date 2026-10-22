@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_THEME_SETTINGS, normalizeThemeSettings } from "@/utils/themeSettings";
+import { resolveCfUsageStyle, resolveNodeViewMode } from "@/utils/layouts";
 
 describe("normalizeThemeSettings", () => {
   it("keeps mini and falls unknown saved view modes back to compact", () => {
@@ -14,9 +15,37 @@ describe("normalizeThemeSettings", () => {
       "mini",
     );
     expect(normalizeThemeSettings({ mobileNodeViewMode: "mini" }).mobileNodeViewMode).toBe("mini");
-    expect(normalizeThemeSettings({ mobileNodeViewMode: "list" }).mobileNodeViewMode).toBe(
-      "compact",
-    );
+    // 列表手机上用不了：回到默认（跟随风格，流光下就是小卡片）。
+    expect(normalizeThemeSettings({ mobileNodeViewMode: "list" }).mobileNodeViewMode).toBe("follow");
+  });
+
+  it("defaults both layouts to following the style, which is the original layout under Lumina", () => {
+    const settings = normalizeThemeSettings({});
+    expect(settings.desktopNodeViewMode).toBe("follow");
+    expect(settings.mobileNodeViewMode).toBe("follow");
+    expect(resolveNodeViewMode(settings.desktopNodeViewMode, "lumina", "desktop")).toBe("large");
+    expect(resolveNodeViewMode(settings.mobileNodeViewMode, "lumina", "mobile")).toBe("compact");
+    expect(resolveNodeViewMode("follow", "frost", "mobile")).toBe("ring");
+    expect(resolveNodeViewMode("hero", "frost", "desktop")).toBe("hero");
+    expect(normalizeThemeSettings({ desktopNodeViewMode: "follow" }).desktopNodeViewMode).toBe("follow");
+  });
+
+  it("keeps the owner usage drawing and card alignment off-by-default and validated", () => {
+    const defaults = normalizeThemeSettings({});
+    expect(defaults.cfUsageStyle).toBe("auto");
+    expect(defaults.cardAlignDesktop).toBe(false);
+    expect(defaults.cardAlignMobile).toBe(false);
+    expect(normalizeThemeSettings({ cfUsageStyle: "meters" }).cfUsageStyle).toBe("meters");
+    expect(normalizeThemeSettings({ cfUsageStyle: "pie" }).cfUsageStyle).toBe("auto");
+    expect(normalizeThemeSettings({ cardAlignDesktop: true, cardAlignMobile: "yes" } as never)).toMatchObject({
+      cardAlignDesktop: true,
+      cardAlignMobile: false,
+    });
+    expect(resolveCfUsageStyle("auto", "frost")).toBe("rings");
+    expect(resolveCfUsageStyle("auto", "terminal")).toBe("chars");
+    expect(resolveCfUsageStyle("auto", "cockpit")).toBe("meters");
+    expect(resolveCfUsageStyle("auto", "collage")).toBe("bars");
+    expect(resolveCfUsageStyle("rings", "lumina")).toBe("rings");
   });
 
   it("defaults overview ratings on unless explicitly disabled", () => {

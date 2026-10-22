@@ -606,6 +606,28 @@ body::after {
   width: 70%;
 }
 
+.opt-collage {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.opt-collage > span {
+  border-radius: 3px;
+}
+
+/* 「跟随」选中时，跟出来的那一项：虚线框。 */
+.opt-card[data-following] {
+  outline: 1.5px dashed color-mix(in srgb, var(--accent-500) 55%, transparent);
+  outline-offset: -4px;
+}
+
+.opt-card[data-following] .opt-sub {
+  color: var(--accent-500);
+}
+
 .opt-text {
   display: flex;
   min-width: 0;
@@ -639,7 +661,7 @@ body::after {
   place-items: center;
   border-radius: 999px;
   background: var(--accent-500);
-  color: #fff;
+  color: var(--text-on-strong);
 }
 
 @media (prefers-reduced-motion: reduce) {

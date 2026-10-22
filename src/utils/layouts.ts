@@ -1,20 +1,52 @@
 import type { SkinId } from "@/utils/skin";
-import type { NodeViewMode } from "@/utils/themeSettings";
+import type { NodeViewMode, NodeViewModeSetting } from "@/utils/themeSettings";
 
 /** 原来的四种卡片视图，和 Lumina Prism 新加的六种（弹出菜单、设置页分两组列出）。 */
 export const CLASSIC_VIEW_MODES = ["large", "compact", "mini", "list"] as const satisfies readonly NodeViewMode[];
 export const NEW_VIEW_MODES = ["ring", "hero", "route", "bento", "health", "gauge"] as const satisfies readonly NodeViewMode[];
 export type NewViewMode = (typeof NEW_VIEW_MODES)[number];
 
-/** 每种新布局的推荐风格；设置页「一键套用」同时换上布局和风格。风格和布局仍然可以随意混搭。 */
-export const LAYOUT_PAIRS: readonly (readonly [NodeViewMode, SkinId])[] = [
-  ["ring", "frost"],
-  ["hero", "aurora"],
-  ["route", "terminal"],
-  ["bento", "lumina"],
-  ["health", "paper"],
-  ["gauge", "cockpit"],
-];
+/**
+ * 布局选「跟随风格」时每个风格配的布局。流光是原版风格，配原版布局（电脑大卡片、手机小卡片），
+ * 所以风格选流光、布局跟随时就是原来主题的样子；其它六个风格各配一种新布局。
+ */
+const SKIN_LAYOUT: Record<SkinId, NewViewMode | null> = {
+  lumina: null,
+  paper: "health",
+  frost: "ring",
+  terminal: "route",
+  aurora: "hero",
+  cockpit: "gauge",
+  collage: "bento",
+};
+
+export function followLayout(skin: SkinId, device: "desktop" | "mobile"): NodeViewMode {
+  return SKIN_LAYOUT[skin] ?? (device === "mobile" ? "compact" : "large");
+}
+
+/** 布局设置（可能是「跟随风格」）→ 这台设备实际用的布局。 */
+export function resolveNodeViewMode(setting: NodeViewModeSetting, skin: SkinId, device: "desktop" | "mobile"): NodeViewMode {
+  return setting === "follow" ? followLayout(skin, device) : setting;
+}
+
+/**
+ * 站长区 CF 用量的画法（设置「站长用量」），和风格分开选；颜色仍然跟着风格。
+ * auto = 跟随风格：雾玻璃小圆环、终端字符格、座舱电平表，其它风格横条。
+ */
+export const CF_USAGE_STYLES = ["bars", "rings", "chars", "meters"] as const;
+export type CfUsageStyle = (typeof CF_USAGE_STYLES)[number];
+export type CfUsageStyleSetting = "auto" | CfUsageStyle;
+export const CF_USAGE_STYLE_OPTIONS: readonly CfUsageStyleSetting[] = ["auto", ...CF_USAGE_STYLES];
+
+const SKIN_CF_USAGE: Partial<Record<SkinId, CfUsageStyle>> = { frost: "rings", terminal: "chars", cockpit: "meters" };
+
+export function normalizeCfUsageStyle(value: unknown): CfUsageStyleSetting {
+  return typeof value === "string" && (CF_USAGE_STYLES as readonly string[]).includes(value) ? (value as CfUsageStyle) : "auto";
+}
+
+export function resolveCfUsageStyle(setting: CfUsageStyleSetting, skin: SkinId): CfUsageStyle {
+  return setting === "auto" ? (SKIN_CF_USAGE[skin] ?? "bars") : setting;
+}
 
 /**
  * 新布局的延迟画法，和布局分开选（设置「延迟样式」）：

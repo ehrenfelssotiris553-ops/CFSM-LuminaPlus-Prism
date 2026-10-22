@@ -203,7 +203,7 @@ function OfflineBody({ card }: { card: Card }) {
 function Latency({ card, className }: { card: Card; className?: string }) {
   if (card.lines.length === 0) return null;
   return (
-    <div className={className}>
+    <div className={clsx("lc-lat-slot", className)}>
       <LatencyBlock uuid={card.node.uuid} lines={card.lines} style={card.latencyStyle} redrawKey={card.redrawKey} />
     </div>
   );
@@ -458,7 +458,7 @@ export const BentoNodeCard = memo(function BentoNodeCard({ uuid }: { uuid: strin
   return (
     <CardShell card={card}>
       <div className="lc-bento">
-        <div className="lc-tile lc-tile-speed">
+        <div className="lc-tile lc-tile-speed" data-tint="net">
           <div className="lc-hero-number is-small">
             <span className="lc-label">{t("lc.netSpeed")}</span>
             <strong>
@@ -468,16 +468,16 @@ export const BentoNodeCard = memo(function BentoNodeCard({ uuid }: { uuid: strin
           </div>
           <Spark card={card} width={78} height={34} />
         </div>
-        <div className="lc-tile lc-tile-cpu">
+        <div className="lc-tile lc-tile-cpu" data-tint="cpu">
           <Ring value={node.cpuPct} label={card.cores ? `CPU · ${t("lc.cores", { n: card.cores })}` : "CPU"} detail={`${t("metric.load")} ${node.load1.toFixed(2)}`} color="var(--progress-cpu)" size={60} />
         </div>
-        <div className="lc-tile">
+        <div className="lc-tile" data-tint="mem">
           <Meter label={t("metric.memory")} value={node.ramPct} color="var(--progress-memory)" detail={card.memDetail} />
         </div>
-        <div className="lc-tile">
+        <div className="lc-tile" data-tint="disk">
           <Meter label={t("metric.disk")} value={node.diskPct} color="var(--progress-disk)" detail={card.diskDetail} />
         </div>
-        <div className="lc-tile lc-tile-full">
+        <div className="lc-tile lc-tile-full" data-tint="quota">
           <Quota card={card} />
         </div>
       </div>
@@ -492,7 +492,7 @@ export const BentoNodeCard = memo(function BentoNodeCard({ uuid }: { uuid: strin
           </div>
         ) : null}
         {small.map((item) => (
-          <div key={item.key} className="lc-tile">
+          <div key={item.key} className="lc-tile" data-tint="misc">
             <span className="lc-label">{item.label}</span>
             <b className="tabular">{item.value}</b>
           </div>

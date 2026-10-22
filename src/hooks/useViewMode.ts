@@ -2,8 +2,9 @@ import { useCallback, useSyncExternalStore } from "react";
 import { useThemeSettings } from "@/hooks/useThemeSettings";
 import { canSyncSiteTheme } from "@/services/siteOwner";
 import { patchLocalThemeSettings } from "@/services/themeSettingsStore";
+import { resolveNodeViewMode } from "@/utils/layouts";
 import { subscribeMediaQuery } from "@/utils/mediaQuery";
-import { NODE_VIEW_MODES, type NodeViewMode } from "@/utils/themeSettings";
+import { NODE_VIEW_MODES, type NodeViewMode, type NodeViewModeSetting } from "@/utils/themeSettings";
 
 // 老版本在快捷栏选布局只存在这个标签页里（sessionStorage）；现在站长选的就是全站默认，这两个键不再用，打开时顺手清掉。
 const LEGACY_OVERRIDE_KEYS = [
@@ -66,7 +67,7 @@ function subscribe(listener: () => void) {
 }
 
 /**
- * 首页用哪种卡片布局：就是站点设置里的「电脑默认 / 手机默认」。
+ * 首页用哪种卡片布局：就是站点设置里的「电脑默认 / 手机默认」；设置是「跟随风格」时按所选风格配的布局。
  * 站长在快捷栏选一个，改的就是这台设备那一类（手机或电脑）的全站默认，随后自动同步到后端，访客下次打开就跟着变；
  * 访客没有布局按钮（setMode 对访客什么都不做）。
  */
@@ -74,17 +75,17 @@ export function useViewMode() {
   const themeSettings = useThemeSettings();
   const device = useSyncExternalStore(subscribe, getDevice, getDevice);
   const isMobile = device === "mobile";
-  const defaultMode = isMobile ? themeSettings.mobileNodeViewMode : themeSettings.desktopNodeViewMode;
+  const setting = isMobile ? themeSettings.mobileNodeViewMode : themeSettings.desktopNodeViewMode;
   // 移动端若被解析成 list(默认值被强制写成 list 等极端情况),兜底回 compact —— 列表仅桌面可用。
-  const mode = normalizeViewModeForDevice(defaultMode, device);
+  const mode = normalizeViewModeForDevice(resolveNodeViewMode(setting, themeSettings.skin, device), device);
   const nextMode = getNextViewMode(mode, device);
 
   const setMode = useCallback(
-    (next: NodeViewMode) => {
-      if (!canSyncSiteTheme() || next === mode) return;
+    (next: NodeViewModeSetting) => {
+      if (!canSyncSiteTheme() || next === setting) return;
       patchLocalThemeSettings(isMobile ? { mobileNodeViewMode: next } : { desktopNodeViewMode: next });
     },
-    [isMobile, mode],
+    [isMobile, setting],
   );
 
   const toggleMode = useCallback(() => {
@@ -94,6 +95,8 @@ export function useViewMode() {
   return {
     device,
     mode,
+    /** 设置里存的值（可能是 follow），布局面板用它标出选中的那一项。 */
+    setting,
     nextMode,
     setMode,
     toggleMode,

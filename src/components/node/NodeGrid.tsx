@@ -1,6 +1,7 @@
 import { t } from "@/i18n";
 import { useEffect, useMemo, useRef, useState, type ComponentType, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
+import { clsx } from "clsx";
 import { useQuery } from "@tanstack/react-query";
 import { CircleDollarSign } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -31,6 +32,7 @@ import {
   sortHomeGroupOptions,
 } from "@/utils/homeNodes";
 import { getDisplayRegionCode } from "@/utils/geo";
+import { isNewViewMode } from "@/utils/layouts";
 import { useHomeSort } from "@/hooks/useHomeSort";
 import { useHomeNodeOrder } from "@/hooks/useHomeNodeOrder";
 import { useHourlyClock } from "@/hooks/useClock";
@@ -273,8 +275,7 @@ function HomeOverviewCards({
       data-cards={showAssetCard ? 4 : 3}
       aria-label={t("home.overviewLabel")}
     >
-      {/* --online-pct：雾玻璃风格把在线卡画成圆环、座舱画成指示灯条用（styles/page-skins.css）。 */}
-      <article className="overview-card" data-metric="online" style={{ "--online-pct": `${onlinePct}%` } as CSSProperties}>
+      <article className="overview-card" data-metric="online">
         <span className="overview-card-label">{t("home.onlineNodes")}</span>
         <div className="overview-card-main">
           <p className="overview-card-value">
@@ -486,7 +487,7 @@ export function NodeGrid() {
   const { data: publicConfig } = usePublicConfig();
   const siteName = publicConfig?.sitename?.trim() || t("home.defaultSiteName");
   const themeSettings = useThemeSettings();
-  const { mode } = useViewMode();
+  const { mode, device } = useViewMode();
   const sort = useHomeSort();
   // enableHomeSort 控制访客能否改排序;关闭时无视 session 覆盖、直接用管理员默认序(默认仍是 weight)。
   const sortEnabled = themeSettings.isReady && themeSettings.enableHomeSort;
@@ -768,7 +769,7 @@ export function NodeGrid() {
       if (mode === "list") return null;
       const CardComponent = CARD_COMPONENTS[mode];
       return orderedUuids.map((uuid) => (
-        <div key={uuid} className="relative min-w-0">
+        <div key={uuid} className="node-cell relative min-w-0">
           <CardComponent uuid={uuid} />
           {/* 站长打码时被打码的卡片右上角的小眼睛（临时显示这一台）；平时返回 null。 */}
           <MaskRevealButton uuid={uuid} />
@@ -776,6 +777,15 @@ export function NodeGrid() {
       ));
     },
     [orderedUuids, mode],
+  );
+  // 卡片对齐高度（设置 → 布局 → 卡片，只对六种新布局）：电脑上同一排一样高，手机上所有在线卡片一样高。
+  // 手机靠「每行一样高」实现，收起来的离线卡片要放进另一个网格，不然也会被撑成一样高。
+  const alignCards =
+    isNewViewMode(mode) && (device === "mobile" ? themeSettings.cardAlignMobile : themeSettings.cardAlignDesktop);
+  const alignAll = alignCards && device === "mobile";
+  const offlineUuids = useMemo(
+    () => (alignAll ? new Set(orderedNodes.filter((node) => node.online === false).map((node) => node.uuid)) : null),
+    [alignAll, orderedNodes],
   );
   const showGroupTabs =
     themeSettings.isReady && themeSettings.showGroupTabs && groupOptions.length > 0;
@@ -792,17 +802,42 @@ export function NodeGrid() {
   const isMini = mode === "mini";
   const isList = mode === "list";
   const { className: gridClassName, minColumnWidth } = GRID_LAYOUT[mode];
-  const gridWrapClassName = isMini ? `${gridClassName} node-grid-mini` : gridClassName;
+  const gridWrapClassName = clsx(gridClassName, isMini && "node-grid-mini", alignCards && "is-align");
   const gridStyle = isList
     ? undefined
     : isMini
       ? ({ "--mini-card-min-width": `${minColumnWidth}px` } as MiniGridStyle)
       : { gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${minColumnWidth}px), 1fr))` };
-  const gridElement = (
+  let gridElement = (
     <div className={gridWrapClassName} style={gridStyle}>
       {cards}
     </div>
   );
+  if (cards && offlineUuids && offlineUuids.size > 0) {
+    // 离线卡片总是排在一头（最前或最后，见 homeSort），拆成两个网格不改变顺序。
+    const online = cards.filter((card) => !offlineUuids.has(String(card.key)));
+    const offline = cards.filter((card) => offlineUuids.has(String(card.key)));
+    const offlineFirst = offlineUuids.has(orderedUuids[0] ?? "");
+    const onlineGrid = online.length > 0 ? (
+      <div key="online" className={clsx(gridWrapClassName, "is-align-all")} style={gridStyle}>
+        {online}
+      </div>
+    ) : null;
+    const offlineGrid = (
+      <div key="offline" className={clsx(gridClassName, isMini && "node-grid-mini")} style={gridStyle}>
+        {offline}
+      </div>
+    );
+    gridElement = (
+      <div className="node-grid-groups">{offlineFirst ? [offlineGrid, onlineGrid] : [onlineGrid, offlineGrid]}</div>
+    );
+  } else if (alignAll) {
+    gridElement = (
+      <div className={clsx(gridWrapClassName, "is-align-all")} style={gridStyle}>
+        {cards}
+      </div>
+    );
+  }
   if (!themeSettings.isReady || !storeHydrated) {
     if (!nodeInfoError) return null;
     return (

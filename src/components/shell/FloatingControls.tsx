@@ -38,7 +38,7 @@ export function FloatingControls({
   onExpandedChange?: (expanded: boolean) => void;
 }) {
   const { appearance, setAppearance } = usePreferences();
-  const { mode, device, setMode } = useViewMode();
+  const { mode, setting, device, setMode } = useViewMode();
   const { data: me } = useAuth();
   const isOwner = useCanSyncSiteTheme();
   const themeSettings = useThemeSettings();
@@ -202,6 +202,7 @@ export function FloatingControls({
         {showViewMode && openMenu === "layout" && !collapsed && (
           <LayoutMenu
             current={mode}
+            setting={setting}
             device={device}
             anchorRef={layoutButtonRef}
             onClose={closeMenu}

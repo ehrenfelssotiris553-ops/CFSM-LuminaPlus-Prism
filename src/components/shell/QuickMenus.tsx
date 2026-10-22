@@ -1,14 +1,21 @@
 import { t, type MessageKey } from "@/i18n";
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
-import { LatencyThumb, LayoutThumb, OptionCard, SkinThumb } from "@/components/ui/OptionCards";
+import { CfUsageThumb, FollowThumb, LatencyThumb, LayoutThumb, OptionCard, SkinThumb } from "@/components/ui/OptionCards";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { useThemeSettings } from "@/hooks/useThemeSettings";
 import { resetMetricColorsToSkin, useHasCustomMetricColors } from "@/hooks/useMetricColors";
 import type { ViewModeDevice } from "@/hooks/useViewMode";
 import { patchLocalThemeSettings } from "@/services/themeSettingsStore";
-import { CLASSIC_VIEW_MODES, LATENCY_STYLE_OPTIONS, NEW_VIEW_MODES } from "@/utils/layouts";
+import {
+  CF_USAGE_STYLE_OPTIONS,
+  CLASSIC_VIEW_MODES,
+  LATENCY_STYLE_OPTIONS,
+  NEW_VIEW_MODES,
+  followLayout,
+  resolveCfUsageStyle,
+} from "@/utils/layouts";
 import { SKIN_IDS, type SkinId } from "@/utils/skin";
-import type { NodeViewMode } from "@/utils/themeSettings";
+import type { NodeViewMode, NodeViewModeSetting } from "@/utils/themeSettings";
 
 const MetricColorPicker = lazy(() =>
   import("./MetricColorPicker").then((module) => ({ default: module.MetricColorPicker })),
@@ -87,22 +94,34 @@ function Fold({ title, sub, value, open, onToggle, children }: { title: string; 
   );
 }
 
-/** 「布局」面板：经典 4 种 + 新布局 6 种，下面折叠着「延迟样式」。 */
+/** 「跟随风格」那一项的说明：现在跟到哪个布局（流光跟随时是原版布局）。 */
+export function followLayoutText(skin: SkinId, device: ViewModeDevice): string {
+  const name = t(`viewMode.${followLayout(skin, device)}` as MessageKey);
+  const layout = skin === "lumina" ? t("layout.original", { layout: name }) : name;
+  return t("layout.followNow", { skin: t(`skin.name.${skin}` as MessageKey), layout });
+}
+
+/** 「布局」面板：跟随风格 + 经典 4 种 + 新布局 6 种，下面折叠着「延迟样式」。 */
 export function LayoutMenu({
   current,
+  setting,
   device,
   anchorRef,
   onPick,
   onClose,
 }: {
+  /** 这台设备实际用的布局。 */
   current: NodeViewMode;
+  /** 设置里存的值（可能是跟随风格）。 */
+  setting: NodeViewModeSetting;
   device: ViewModeDevice;
   anchorRef: RefObject<HTMLElement | null>;
-  onPick: (mode: NodeViewMode) => void;
+  onPick: (mode: NodeViewModeSetting) => void;
   onClose: () => void;
 }) {
-  const { latencyStyle } = useThemeSettings();
+  const { latencyStyle, skin } = useThemeSettings();
   const [latOpen, setLatOpen] = useState(false);
+  const follows = setting === "follow";
   const groups: { titleKey: MessageKey; modes: readonly NodeViewMode[] }[] = [
     { titleKey: "quick.layoutsClassic", modes: device === "mobile" ? CLASSIC_VIEW_MODES.filter((mode) => mode !== "list") : CLASSIC_VIEW_MODES },
     { titleKey: "quick.layoutsNew", modes: NEW_VIEW_MODES },
@@ -115,6 +134,17 @@ export function LayoutMenu({
       anchorRef={anchorRef}
       onClose={onClose}
     >
+      <div className="opt-grid" role="radiogroup" aria-label={t("layout.follow")}>
+        <OptionCard
+          role="menuitemradio"
+          thumb={<FollowThumb />}
+          name={t("layout.follow")}
+          sub={followLayoutText(skin, device)}
+          active={follows}
+          style={{ gridColumn: "1 / -1" }}
+          onPick={() => onPick("follow")}
+        />
+      </div>
       {groups.map(({ titleKey, modes }) => (
         <div key={titleKey} className="quick-pop-group">
           <span className="quick-pop-label">{t(titleKey)}</span>
@@ -125,8 +155,9 @@ export function LayoutMenu({
                 role="menuitemradio"
                 thumb={<LayoutThumb mode={mode} />}
                 name={t(`viewMode.${mode}` as MessageKey)}
-                sub={t(`viewModeSub.${mode}` as MessageKey)}
-                active={mode === current}
+                sub={follows && mode === current ? t("layout.following") : t(`viewModeSub.${mode}` as MessageKey)}
+                active={!follows && mode === current}
+                following={follows && mode === current}
                 onPick={() => onPick(mode)}
               />
             ))}
@@ -158,12 +189,14 @@ export function LayoutMenu({
   );
 }
 
-/** 「风格」面板：六种风格，下面折叠着「指标配色」。 */
+/** 「风格」面板：七种风格（默认的流光占一整行），下面折叠着「站长用量」和「指标配色」。 */
 export function StyleMenu({ anchorRef, onClose }: { anchorRef: RefObject<HTMLElement | null>; onClose: () => void }) {
-  const { skin } = useThemeSettings();
+  const { skin, cfUsageStyle } = useThemeSettings();
   const { data: config } = usePublicConfig();
   const hasCustomColors = useHasCustomMetricColors();
   const [colorsOpen, setColorsOpen] = useState(false);
+  const [usageOpen, setUsageOpen] = useState(false);
+  const usageNow = resolveCfUsageStyle(cfUsageStyle, skin);
   // 这次打开面板里换过风格、并且指标配色是自己改过的：提示一下能恢复成风格自带的配色。
   const [switched, setSwitched] = useState(false);
   const pick = (next: SkinId) => {
@@ -182,6 +215,7 @@ export function StyleMenu({ anchorRef, onClose }: { anchorRef: RefObject<HTMLEle
             name={t(`skin.name.${id}` as MessageKey)}
             sub={t(`skin.sub.${id}` as MessageKey)}
             active={id === skin}
+            style={id === "lumina" ? { gridColumn: "1 / -1" } : undefined}
             onPick={() => pick(id)}
           />
         ))}
@@ -194,6 +228,35 @@ export function StyleMenu({ anchorRef, onClose }: { anchorRef: RefObject<HTMLEle
           </button>
         </div>
       ) : null}
+      <Fold
+        title={t("cfStyle.title")}
+        sub={t("cfStyle.sub")}
+        value={<span className="quick-fold-value">{t(`cfStyle.name.${cfUsageStyle}` as MessageKey)}</span>}
+        open={usageOpen}
+        onToggle={() => setUsageOpen((value) => !value)}
+      >
+        <div className="opt-grid" role="radiogroup" aria-label={t("cfStyle.title")}>
+          {CF_USAGE_STYLE_OPTIONS.map((style) => (
+            <OptionCard
+              key={style}
+              role="menuitemradio"
+              thumb={<CfUsageThumb style={style} />}
+              name={t(`cfStyle.name.${style}` as MessageKey)}
+              sub={
+                style === "auto"
+                  ? t("cfStyle.followNow", { v: t(`cfStyle.name.${usageNow}` as MessageKey) })
+                  : cfUsageStyle === "auto" && style === usageNow
+                    ? t("layout.following")
+                    : t(`cfStyle.sub.${style}` as MessageKey)
+              }
+              active={style === cfUsageStyle}
+              following={cfUsageStyle === "auto" && style === usageNow}
+              style={style === "auto" ? { gridColumn: "1 / -1" } : undefined}
+              onPick={() => patchLocalThemeSettings({ cfUsageStyle: style })}
+            />
+          ))}
+        </div>
+      </Fold>
       <Fold
         title={t("colors.title")}
         sub={t(hasCustomColors ? "quick.colorsCustom" : "quick.colorsFollow")}

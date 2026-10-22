@@ -976,6 +976,12 @@
 /* ---------- 延迟：公共部分 ---------- */
 
 .lc-lat {
+  /* 丢包图的颜色（风格可以改，见文件末尾）：没丢包是淡绿打底，没数据是轨道色。 */
+  --loss-ok: color-mix(in srgb, var(--status-success) 32%, transparent);
+  --loss-warn: var(--status-warning);
+  --loss-bad: var(--status-error);
+  --loss-none: var(--progress-bg);
+  --loss-base: color-mix(in srgb, var(--text-primary) 18%, transparent);
   display: flex;
   min-width: 0;
   flex-direction: column;
@@ -1147,11 +1153,45 @@
   font-size: 17px;
 }
 
+/* 走势线和下面的倒影一列，宽度跟着胶囊走。 */
+.lc-lat-spark-col {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
 .lc-lat-spark {
+  display: block;
+  width: 100%;
   min-width: 0;
   height: 22px;
-  flex: 1;
+  flex: 0 0 auto;
   overflow: visible;
+}
+
+/* 倒影：一条基线，丢包时往下垂一小截（只画丢了包的格子）。 */
+.lc-loss-drops {
+  display: block;
+  width: 100%;
+  height: 9px;
+  overflow: visible;
+}
+
+.lc-loss-base {
+  stroke: var(--loss-base);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.lc-loss-mark[data-tone="warn"] {
+  background: var(--loss-warn);
+  fill: var(--loss-warn);
+}
+
+.lc-loss-mark[data-tone="bad"] {
+  background: var(--loss-bad);
+  fill: var(--loss-bad);
 }
 
 /* 对比条 */
@@ -1163,12 +1203,45 @@
   gap: 8px;
 }
 
+.lc-cmp-tracks {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .lc-cmp-track {
   position: relative;
   display: block;
   height: 8px;
   border-radius: 999px;
   background: var(--progress-bg);
+}
+
+/* 下面那根细条是丢包率（0～5%），几条线路上下比谁丢得多；没丢包只有开头一个小绿点。 */
+.lc-cmp-loss {
+  position: relative;
+  display: block;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--progress-bg) 60%, transparent);
+}
+
+.lc-cmp-loss > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+}
+
+.lc-cmp-loss[data-zero]::before {
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--status-success);
+  content: "";
 }
 
 .lc-cmp-band {
@@ -1246,8 +1319,38 @@
 }
 
 .lc-histo-bars {
-  display: block;
+  display: flex;
   min-width: 0;
+  flex-direction: column;
+}
+
+/* 柱状历史的丢包：和上面的柱子同一套格子（同样 2px 缝），没丢包是一小截底线，丢包的柱子往下长。 */
+.lc-loss-wave {
+  display: grid;
+  height: 10px;
+  margin-top: 2px;
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  align-items: start;
+  column-gap: 2px;
+}
+
+.lc-loss-stubs {
+  height: 2px;
+  grid-column: 1 / -1;
+  grid-row: 1;
+  mask: repeating-linear-gradient(
+    90deg,
+    #000 0,
+    #000 calc((100% + 2px) / var(--n) - 2px),
+    transparent calc((100% + 2px) / var(--n) - 2px),
+    transparent calc((100% + 2px) / var(--n))
+  );
+}
+
+.lc-loss-wave > .lc-loss-mark {
+  position: relative;
+  grid-row: 1;
+  border-radius: 0 0 2px 2px;
 }
 
 /* 信号方块 */
@@ -1264,9 +1367,16 @@
   flex-direction: column;
   gap: 2px;
   overflow: hidden;
-  padding: 9px 10px 16px;
+  padding: 9px 10px 8px;
   border-radius: calc(11px * var(--radius-scale, 1));
   background: var(--surface-sunken);
+}
+
+/* 方块最底下一排圆点（一个元素，多层径向渐变画点）：丢包的点大一圈、变色。 */
+.lc-loss-dots {
+  display: block;
+  height: 8px;
+  margin-top: 12px;
 }
 
 .lc-lat-tile > :not(.lc-tile-spark) {
@@ -1279,7 +1389,7 @@
 
 .lc-tile-spark {
   position: absolute;
-  bottom: 0;
+  bottom: 14px;
   left: 0;
   width: 100%;
   height: 22px;
@@ -1348,9 +1458,21 @@
   gap: 8px;
 }
 
+/* 上轨延迟、下轨丢包，格子对齐。 */
+.lc-status-tracks {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.lc-status-strip.is-loss {
+  height: 5px;
+}
+
 .lc-status-strip {
   display: block;
-  height: 14px;
+  height: 12px;
   border-radius: calc(2px * var(--radius-scale, 1));
   mask: repeating-linear-gradient(
     90deg,
@@ -1384,7 +1506,7 @@
 .lc-scope-box {
   position: relative;
   display: block;
-  height: 30px;
+  height: 34px;
   border-radius: calc(6px * var(--radius-scale, 1));
   background: var(--surface-a);
   box-shadow: inset 0 0 0 1px var(--hairline);
@@ -1415,6 +1537,23 @@
   stroke-linejoin: round;
   stroke-width: 1.6;
   vector-effect: non-scaling-stroke;
+}
+
+/* 双通道：左上角小字标出两条线各是什么。 */
+.lc-scope-ch {
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  display: flex;
+  gap: 5px;
+  font-size: 8.5px;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.lc-scope-ch > span:last-child {
+  color: var(--loss-bad);
 }
 
 .lc-scope-pointer {
@@ -1471,4 +1610,108 @@
   .lc-cmp-fill {
     transition: none;
   }
+}
+
+/* ---------- 卡片对齐高度（设置 → 布局 → 卡片；NodeGrid 给网格加 is-align） ----------
+ * 电脑：同一排一样高；手机（is-align-all）：每行一样高。卡片撑满格子，延迟区吃掉多出来的高度，
+ * 线路少的卡片格子和走势图变大，底部那行对齐。收起来的离线卡片不拉高。 */
+
+.node-grid.is-align > .node-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.node-grid.is-align > .node-cell > .lc-card:not(.is-offline) {
+  flex: 1 1 auto;
+}
+
+.node-grid.is-align-all {
+  grid-auto-rows: 1fr;
+}
+
+/* 手机上在线、离线拆成两个网格（NodeGrid），两组之间留和卡片之间一样的空。 */
+.node-grid-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.node-grid.is-align .lc-card > :is(.lc-foot, .lc-statusbar) {
+  margin-top: auto;
+}
+
+.node-grid.is-align .lc-lat-slot {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.node-grid.is-align .lc-lat-slot > .lc-lat {
+  flex: 1 1 auto;
+}
+
+.node-grid.is-align :is(.lc-lat-capsules, .lc-lat-tiles) {
+  flex: 1 1 auto;
+  grid-auto-rows: 1fr;
+}
+
+.node-grid.is-align .lc-lat-capsule .lc-lat-row.is-bottom {
+  flex: 1 1 auto;
+  align-items: stretch;
+}
+
+.node-grid.is-align .lc-lat-capsule .lc-ms {
+  align-self: flex-end;
+}
+
+.node-grid.is-align .lc-lat-spark-col .lc-lat-spark {
+  height: auto;
+  min-height: 22px;
+  flex: 1 1 auto;
+}
+
+.node-grid.is-align .lc-tile-spark {
+  height: max(22px, calc(100% - 66px));
+}
+
+.node-grid.is-align :is(.lc-lat-rows, .lc-lat-histo) {
+  flex: 1 1 auto;
+  justify-content: space-around;
+}
+
+/* ---------- 丢包图跟着风格（颜色、圆角、光效；不用单独设置） ---------- */
+
+:root[data-skin="paper"] .lc-lat {
+  --loss-ok: transparent;
+  --loss-base: var(--text-primary);
+}
+
+:root[data-skin="paper"] .lc-loss-wave > .lc-loss-mark,
+:root[data-skin="terminal"] :is(.lc-loss-wave > .lc-loss-mark, .lc-cmp-loss, .lc-cmp-loss > span) {
+  border-radius: 0;
+}
+
+:root[data-skin="frost"] .lc-loss-mark,
+:root[data-skin="aurora"] .lc-loss-mark,
+:root[data-skin="cockpit"][data-appearance="dark"] .lc-loss-mark {
+  filter: drop-shadow(0 0 3px var(--loss-bad));
+}
+
+:root[data-skin="aurora"] .lc-loss-wave > .lc-loss-mark[data-tone="bad"] {
+  background: linear-gradient(180deg, #f472b6, var(--loss-bad));
+}
+
+:root[data-skin="cockpit"] .lc-loss-wave > .lc-loss-mark {
+  border-radius: 1px;
+  mask: repeating-linear-gradient(180deg, #000 0 2px, transparent 2px 3px);
+}
+
+:root[data-skin="collage"] .lc-lat {
+  --loss-ok: color-mix(in srgb, var(--tint-mint) 38%, transparent);
+  --loss-bad: var(--tint-sakura);
+}
+
+:root[data-skin="collage"] .lc-loss-wave > .lc-loss-mark {
+  border-radius: 999px;
 }

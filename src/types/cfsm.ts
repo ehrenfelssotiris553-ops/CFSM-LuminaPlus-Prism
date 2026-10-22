@@ -508,7 +508,7 @@ export const EMPTY_CARRIER_PING: CarrierPingSnapshot = Object.freeze(
 
 export interface ThemeSettings {
   defaultAppearance?: "system" | "light" | "dark";
-  /** 取值见 utils/themeSettings 的 NODE_VIEW_MODES；IPStack 版只认前四种，其它会回退成小卡。 */
+  /** 取值见 utils/themeSettings 的 NODE_VIEW_MODES，或 follow（跟随风格）；IPStack 版只认前四种，其它会回退成小卡。 */
   desktopNodeViewMode?: string;
   mobileNodeViewMode?: string;
   enableAdminButton?: boolean;
@@ -593,6 +593,11 @@ export interface ThemeSettings {
   mySkin?: unknown;
   /** 六种新布局的延迟画法：auto / capsule / compare / histo / tiles / status / scope。 */
   latencyStyle?: string;
+  /** 站长区 CF 用量画法：auto / bars / rings / chars / meters。 */
+  cfUsageStyle?: string;
+  /** 新布局卡片对齐高度：电脑同一排、手机全部。 */
+  cardAlignDesktop?: boolean;
+  cardAlignMobile?: boolean;
   /** 截图打码（站点设置）：打码哪些内容、哪几台、范围、访客也打码。 */
   screenshotMaskFields?: Record<string, boolean>;
   screenshotMaskNodes?: string[];

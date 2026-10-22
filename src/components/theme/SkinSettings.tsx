@@ -91,6 +91,8 @@ export function SkinSettings({
             name={t(`skin.name.${skin}` as MessageKey)}
             sub={t(`skin.sub.${skin}` as MessageKey)}
             active={value.skin === skin && !mineActive}
+            // 默认的流光（原版）单独一整行，下面是另外六个。
+            style={skin === "lumina" ? { gridColumn: "1 / -1" } : undefined}
             onPick={() => onChange({ skin })}
           />
         ))}
