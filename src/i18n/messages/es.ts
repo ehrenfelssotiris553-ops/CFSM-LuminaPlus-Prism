@@ -798,8 +798,8 @@ export const es: Messages = {
   "lat.loss": "Pérdida {v}",
   "lat.lossShort": "pérd. {v}",
   "lat.legend.good": "Bien",
-  "lat.legend.warn": "Lenta",
-  "lat.legend.bad": "Pérdida / muy lenta",
+  "lat.legend.warn": "Lenta / algo de pérdida",
+  "lat.legend.bad": "Muy lenta / mucha pérdida",
   "lat.setting": "Estilo de latencia",
   "lat.settingSub": "Solo los 6 diseños nuevos · se elige aparte",
   "lat.settingDesc": "Cómo dibujan la latencia los seis diseños nuevos. «Según el diseño» deja que cada uno use el suyo; cualquier otra opción se aplica a los seis. Los cuatro diseños clásicos no cambian. Es el mismo ajuste que «Estilo de latencia» en el panel de diseño de la portada.",
@@ -940,5 +940,12 @@ export const es: Messages = {
   "settings.cardAlignDesktopDesc": "Las tarjetas de una fila tienen la misma altura y su línea inferior queda alineada. Desactivado, cada una conserva su altura.",
   "settings.cardAlignMobile": "Móvil: tarjetas en línea iguales",
   "settings.cardAlignMobileDesc": "En el móvil hay una tarjeta por fila; activado, todas las tarjetas en línea miden lo que la más alta, y al desplazarse se ve ordenado.",
+  "quick.cardLayout": "Diseño de tarjetas",
+  "quick.cardLayoutSub": "Seguir el estilo o fijar uno",
+  "quick.followValue": "Siguiendo · {layout}",
+  "quick.skinFold": "Estilo",
+  "quick.skinFoldSub": "7 estilos · Lumina por defecto",
+  "lat.axisLatency": "Lat",
+  "lat.axisLoss": "Pérd",
   // @@entries
 };

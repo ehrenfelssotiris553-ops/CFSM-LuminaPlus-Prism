@@ -23,8 +23,8 @@ const MetricColorPicker = lazy(() =>
 
 /*
  * 首页快捷栏的两个弹出面板：「布局」和「风格」。两个长得一样（同一种卡片、同样的标题栏），一次只开一个；
- * 点面板外面、按 Esc 都会关上。只有登录站长看得到这两个按钮，改了就是全站默认（随后自动同步到后端），
- * 设置页里是同一份设置，改哪边都一样。
+ * 点面板外面、按 Esc 都会关上。面板里每一块都折叠着（标题右边写着现在选的是什么），点开一块别的自动收起。
+ * 只有登录站长看得到这两个按钮，改了就是全站默认（随后自动同步到后端），设置页里是同一份设置，改哪边都一样。
  */
 
 function QuickPopover({
@@ -61,9 +61,10 @@ function QuickPopover({
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [anchorRef, onClose]);
-  // 打开时焦点放到当前选中的那一项。
+  // 打开时焦点放到当前选中的那一项；都折叠着时放到第一块的标题上。
   useEffect(() => {
-    panelRef.current?.querySelector<HTMLButtonElement>('[aria-checked="true"]')?.focus({ preventScroll: true });
+    const panel = panelRef.current;
+    (panel?.querySelector<HTMLButtonElement>('[aria-checked="true"]') ?? panel?.querySelector<HTMLButtonElement>("button"))?.focus({ preventScroll: true });
   }, []);
   return (
     <div ref={panelRef} className="quick-pop" role="dialog" aria-label={label}>
@@ -101,7 +102,7 @@ export function followLayoutText(skin: SkinId, device: ViewModeDevice): string {
   return t("layout.followNow", { skin: t(`skin.name.${skin}` as MessageKey), layout });
 }
 
-/** 「布局」面板：跟随风格 + 经典 4 种 + 新布局 6 种，下面折叠着「延迟样式」。 */
+/** 「布局」面板：「卡片布局」（跟随风格 + 经典 4 种 + 新布局 6 种）和「延迟样式」两块，都折叠着。 */
 export function LayoutMenu({
   current,
   setting,
@@ -120,8 +121,10 @@ export function LayoutMenu({
   onClose: () => void;
 }) {
   const { latencyStyle, skin } = useThemeSettings();
-  const [latOpen, setLatOpen] = useState(false);
+  const [open, setOpen] = useState<"layout" | "lat" | null>(null);
+  const toggle = (key: "layout" | "lat") => setOpen((value) => (value === key ? null : key));
   const follows = setting === "follow";
+  const currentName = t(`viewMode.${current}` as MessageKey);
   const groups: { titleKey: MessageKey; modes: readonly NodeViewMode[] }[] = [
     { titleKey: "quick.layoutsClassic", modes: device === "mobile" ? CLASSIC_VIEW_MODES.filter((mode) => mode !== "list") : CLASSIC_VIEW_MODES },
     { titleKey: "quick.layoutsNew", modes: NEW_VIEW_MODES },
@@ -134,42 +137,50 @@ export function LayoutMenu({
       anchorRef={anchorRef}
       onClose={onClose}
     >
-      <div className="opt-grid" role="radiogroup" aria-label={t("layout.follow")}>
-        <OptionCard
-          role="menuitemradio"
-          thumb={<FollowThumb />}
-          name={t("layout.follow")}
-          sub={followLayoutText(skin, device)}
-          active={follows}
-          style={{ gridColumn: "1 / -1" }}
-          onPick={() => onPick("follow")}
-        />
-      </div>
-      {groups.map(({ titleKey, modes }) => (
-        <div key={titleKey} className="quick-pop-group">
-          <span className="quick-pop-label">{t(titleKey)}</span>
-          <div className="opt-grid" role="radiogroup" aria-label={t(titleKey)}>
-            {modes.map((mode) => (
-              <OptionCard
-                key={mode}
-                role="menuitemradio"
-                thumb={<LayoutThumb mode={mode} />}
-                name={t(`viewMode.${mode}` as MessageKey)}
-                sub={follows && mode === current ? t("layout.following") : t(`viewModeSub.${mode}` as MessageKey)}
-                active={!follows && mode === current}
-                following={follows && mode === current}
-                onPick={() => onPick(mode)}
-              />
-            ))}
-          </div>
+      <Fold
+        title={t("quick.cardLayout")}
+        sub={t("quick.cardLayoutSub")}
+        value={<span className="quick-fold-value">{follows ? t("quick.followValue", { layout: currentName }) : currentName}</span>}
+        open={open === "layout"}
+        onToggle={() => toggle("layout")}
+      >
+        <div className="opt-grid" role="radiogroup" aria-label={t("layout.follow")}>
+          <OptionCard
+            role="menuitemradio"
+            thumb={<FollowThumb />}
+            name={t("layout.follow")}
+            sub={followLayoutText(skin, device)}
+            active={follows}
+            style={{ gridColumn: "1 / -1" }}
+            onPick={() => onPick("follow")}
+          />
         </div>
-      ))}
+        {groups.map(({ titleKey, modes }) => (
+          <div key={titleKey} className="quick-pop-group">
+            <span className="quick-pop-label">{t(titleKey)}</span>
+            <div className="opt-grid" role="radiogroup" aria-label={t(titleKey)}>
+              {modes.map((mode) => (
+                <OptionCard
+                  key={mode}
+                  role="menuitemradio"
+                  thumb={<LayoutThumb mode={mode} />}
+                  name={t(`viewMode.${mode}` as MessageKey)}
+                  sub={follows && mode === current ? t("layout.following") : t(`viewModeSub.${mode}` as MessageKey)}
+                  active={!follows && mode === current}
+                  following={follows && mode === current}
+                  onPick={() => onPick(mode)}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </Fold>
       <Fold
         title={t("lat.setting")}
         sub={t("lat.settingSub")}
         value={<span className="quick-fold-value">{t(`lat.name.${latencyStyle}` as MessageKey)}</span>}
-        open={latOpen}
-        onToggle={() => setLatOpen((value) => !value)}
+        open={open === "lat"}
+        onToggle={() => toggle("lat")}
       >
         <div className="opt-grid">
           {LATENCY_STYLE_OPTIONS.map((style) => (
@@ -189,13 +200,13 @@ export function LayoutMenu({
   );
 }
 
-/** 「风格」面板：七种风格（默认的流光占一整行），下面折叠着「站长用量」和「指标配色」。 */
+/** 「风格」面板：「整体风格」（七种，默认的流光占一整行）、「站长用量」、「配色自定义」三块，都折叠着。 */
 export function StyleMenu({ anchorRef, onClose }: { anchorRef: RefObject<HTMLElement | null>; onClose: () => void }) {
   const { skin, cfUsageStyle } = useThemeSettings();
   const { data: config } = usePublicConfig();
   const hasCustomColors = useHasCustomMetricColors();
-  const [colorsOpen, setColorsOpen] = useState(false);
-  const [usageOpen, setUsageOpen] = useState(false);
+  const [open, setOpen] = useState<"skin" | "usage" | "colors" | null>(null);
+  const toggle = (key: "skin" | "usage" | "colors") => setOpen((value) => (value === key ? null : key));
   const usageNow = resolveCfUsageStyle(cfUsageStyle, skin);
   // 这次打开面板里换过风格、并且指标配色是自己改过的：提示一下能恢复成风格自带的配色。
   const [switched, setSwitched] = useState(false);
@@ -206,34 +217,42 @@ export function StyleMenu({ anchorRef, onClose }: { anchorRef: RefObject<HTMLEle
   };
   return (
     <QuickPopover label={t("quick.styleMenu")} title={t("skin.title")} badge={t("quick.defaultSite")} anchorRef={anchorRef} onClose={onClose}>
-      <div className="opt-grid" role="radiogroup" aria-label={t("skin.title")}>
-        {SKIN_IDS.map((id) => (
-          <OptionCard
-            key={id}
-            role="menuitemradio"
-            thumb={<SkinThumb skin={id} />}
-            name={t(`skin.name.${id}` as MessageKey)}
-            sub={t(`skin.sub.${id}` as MessageKey)}
-            active={id === skin}
-            style={id === "lumina" ? { gridColumn: "1 / -1" } : undefined}
-            onPick={() => pick(id)}
-          />
-        ))}
-      </div>
-      {switched && hasCustomColors ? (
-        <div className="quick-pop-hint" role="status">
-          <span>{t("quick.customColorsHint")}</span>
-          <button type="button" onClick={() => resetMetricColorsToSkin(config?.theme_settings)}>
-            {t("quick.resetToSkinColors")}
-          </button>
+      <Fold
+        title={t("quick.skinFold")}
+        sub={t("quick.skinFoldSub")}
+        value={<span className="quick-fold-value">{t(`skin.name.${skin}` as MessageKey)}</span>}
+        open={open === "skin"}
+        onToggle={() => toggle("skin")}
+      >
+        <div className="opt-grid" role="radiogroup" aria-label={t("skin.title")}>
+          {SKIN_IDS.map((id) => (
+            <OptionCard
+              key={id}
+              role="menuitemradio"
+              thumb={<SkinThumb skin={id} />}
+              name={t(`skin.name.${id}` as MessageKey)}
+              sub={t(`skin.sub.${id}` as MessageKey)}
+              active={id === skin}
+              style={id === "lumina" ? { gridColumn: "1 / -1" } : undefined}
+              onPick={() => pick(id)}
+            />
+          ))}
         </div>
-      ) : null}
+        {switched && hasCustomColors ? (
+          <div className="quick-pop-hint" role="status">
+            <span>{t("quick.customColorsHint")}</span>
+            <button type="button" onClick={() => resetMetricColorsToSkin(config?.theme_settings)}>
+              {t("quick.resetToSkinColors")}
+            </button>
+          </div>
+        ) : null}
+      </Fold>
       <Fold
         title={t("cfStyle.title")}
         sub={t("cfStyle.sub")}
         value={<span className="quick-fold-value">{t(`cfStyle.name.${cfUsageStyle}` as MessageKey)}</span>}
-        open={usageOpen}
-        onToggle={() => setUsageOpen((value) => !value)}
+        open={open === "usage"}
+        onToggle={() => toggle("usage")}
       >
         <div className="opt-grid" role="radiogroup" aria-label={t("cfStyle.title")}>
           {CF_USAGE_STYLE_OPTIONS.map((style) => (
@@ -269,8 +288,8 @@ export function StyleMenu({ anchorRef, onClose }: { anchorRef: RefObject<HTMLEle
             <i style={{ background: "var(--progress-load)" }} />
           </span>
         }
-        open={colorsOpen}
-        onToggle={() => setColorsOpen((value) => !value)}
+        open={open === "colors"}
+        onToggle={() => toggle("colors")}
       >
         <Suspense fallback={null}>
           <MetricColorPicker embedded />

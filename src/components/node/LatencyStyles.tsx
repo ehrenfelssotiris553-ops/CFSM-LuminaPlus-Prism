@@ -1,5 +1,5 @@
 import { t } from "@/i18n";
-import { memo, useMemo, type CSSProperties, type ReactNode } from "react";
+import { memo, useId, useMemo, type CSSProperties, type ReactNode } from "react";
 import { shortLineName } from "@/services/cfsm/mappers";
 import { latencyHeatColor } from "@/utils/metricTone";
 import type { LatencyStyle } from "@/utils/layouts";
@@ -163,6 +163,56 @@ function toneGradient(tones: LossTone[]): string {
     .join(", ")})`;
 }
 
+/** 这一格延迟的颜色（和延迟数字同一套色阶）；整格掉线算最差；没数据是 null（沿用前后的颜色）。 */
+function heatOf(bucket: PingOverviewBucket): string | null {
+  if (bucket.offline) return "var(--latency-critical)";
+  return bucket.value == null || !Number.isFinite(bucket.value) ? null : latencyHeatColor(bucket.value);
+}
+
+/**
+ * 按时间分段上色：第 i 个点在 i / (n-1)，相邻两点在中间换色（硬边）。颜色一样的连成一段，
+ * 平稳的线只有首尾两个节点，几十张卡片也不多几个元素。
+ */
+function timeStops(colors: readonly (string | null)[]): { offset: number; color: string }[] {
+  const n = colors.length;
+  const filled: string[] = [];
+  let last: string | null = null;
+  for (const color of colors) {
+    last = color ?? last;
+    filled.push(last ?? "");
+  }
+  const first = filled.find(Boolean);
+  if (!first) return [];
+  for (let index = 0; index < n && !filled[index]; index += 1) filled[index] = first;
+  const stops = [{ offset: 0, color: filled[0]! }];
+  for (let index = 0; index < n - 1; index += 1) {
+    if (filled[index] === filled[index + 1]) continue;
+    const at = ((index + 0.5) / (n - 1)) * 100;
+    stops.push({ offset: at, color: filled[index]! }, { offset: at, color: filled[index + 1]! });
+  }
+  stops.push({ offset: 100, color: filled[n - 1]! });
+  return stops;
+}
+
+/** SVG 里用的渐变 id（useId 的冒号等字符在 url(#…) 里不安全，去掉）。 */
+function useSvgId(): string {
+  return `lc${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
+}
+
+/** 横向分段渐变，坐标和 viewBox 宽 100 对齐。 */
+function TimeGradient({ id, colors }: { id: string; colors: readonly (string | null)[] }) {
+  const stops = timeStops(colors);
+  return (
+    <defs>
+      <linearGradient id={id} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="100" y2="0">
+        {stops.map((stop, index) => (
+          <stop key={index} offset={`${stop.offset.toFixed(2)}%`} style={{ stopColor: stop.color }} />
+        ))}
+      </linearGradient>
+    </defs>
+  );
+}
+
 /** 丢了包的那几格：x 和走势线的点对齐（第 i 格在 i / (n-1)）。 */
 function lossMarks(buckets: PingOverviewBucket[]) {
   const step = buckets.length > 1 ? 100 / (buckets.length - 1) : 0;
@@ -177,9 +227,12 @@ function lossMarks(buckets: PingOverviewBucket[]) {
 /** 走势胶囊的「倒影」：一条基线，丢包时从基线往下垂一小截。 */
 function LossDrops({ buckets }: { buckets: PingOverviewBucket[] }) {
   const marks = useMemo(() => lossMarks(buckets), [buckets]);
+  const tones = useMemo(() => buckets.map((bucket) => TONE_COLOR[lossTone(bucket)]), [buckets]);
+  const gid = useSvgId();
   return (
     <svg className="lc-loss-drops" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden>
-      <line x1="0" y1="0.5" x2="100" y2="0.5" className="lc-loss-base" />
+      <TimeGradient id={gid} colors={tones} />
+      <line x1="0" y1="1" x2="100" y2="1" className="lc-loss-base" style={{ stroke: `url(#${gid})` }} />
       {marks.map((mark) => (
         <rect key={mark.x} x={Math.min(98.6, Math.max(0, mark.x - 0.7))} y="1" width="1.4" height={2.5 + mark.level * 6.5} className="lc-loss-mark" data-tone={mark.tone} />
       ))}
@@ -255,13 +308,16 @@ function Ms({ line, className = "lc-ms" }: { line: LatLine; className?: string }
 
 function Spark({ line, stats, className }: { line: LatLine; stats: LineStats; className: string }) {
   const paths = useMemo(() => sparkPaths(line.buckets, stats), [line.buckets, stats]);
-  const color = latencyHeatColor(line.value);
+  const colors = useMemo(() => line.buckets.map(heatOf), [line.buckets]);
+  const gid = useSvgId();
+  const paint = `url(#${gid})`;
   return (
-    <svg className={className} viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden style={{ "--lat": color } as CSSProperties}>
+    <svg className={className} viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden style={{ "--lat": latencyHeatColor(line.value) } as CSSProperties}>
       {paths ? (
         <>
-          <path d={paths.area} className="lc-spark-fill" />
-          <polyline points={paths.line} className="lc-spark-stroke" />
+          <TimeGradient id={gid} colors={colors} />
+          <path d={paths.area} className="lc-spark-fill" style={{ fill: paint }} />
+          <polyline points={paths.line} className="lc-spark-stroke" style={{ stroke: paint }} />
         </>
       ) : (
         <line x1="0" y1="20" x2="100" y2="20" className="lc-spark-empty" />
@@ -333,11 +389,10 @@ function Compare({ uuid, lines, stats }: StyleProps) {
                 {s.count ? <span className="lc-cmp-band" style={{ left: `${bandLeft}%`, width: `${Math.min(100 - bandLeft, bandWidth)}%` }} /> : null}
                 <span className="lc-cmp-fill" style={{ width: `${fill}%` }} />
               </span>
-              <span className="lc-cmp-loss" data-zero={line.loss === 0 ? "" : undefined}>
-                {line.loss != null && line.loss > 0 ? (
-                  <span style={{ width: `${Math.max(4, Math.min(100, (line.loss / 5) * 100))}%`, background: lossColor(line.loss) }} />
-                ) : null}
-              </span>
+              <span
+                className="lc-cmp-loss"
+                style={{ background: toneGradient(line.buckets.map(lossTone)), "--n": line.buckets.length || 1 } as CSSProperties}
+              />
             </span>
             <Spark line={line} stats={s} className="lc-cmp-spark" />
             <span className="lc-cmp-num">
@@ -440,6 +495,10 @@ function Status({ uuid, lines }: StyleProps) {
       {lines.map((line) => (
         <div key={line.key} className="lc-lat-status">
           <LineName uuid={uuid} line={line} />
+          <span className="lc-status-axis" aria-hidden>
+            <span>{t("lat.axisLatency")}</span>
+            <span>{t("lat.axisLoss")}</span>
+          </span>
           <span className="lc-status-tracks" aria-hidden>
             <span className="lc-status-strip" style={{ background: statusBackground(line.buckets), "--n": line.buckets.length || 1 } as CSSProperties} />
             <span className="lc-status-strip is-loss" style={{ background: toneGradient(line.buckets.map(lossTone)), "--n": line.buckets.length || 1 } as CSSProperties} />
@@ -464,45 +523,56 @@ const SCOPE_ZONES = [
   { y: scopeY(60), h: 30 - scopeY(60), tone: "var(--status-success)" },
 ];
 
+function ScopeRow({ uuid, line }: { uuid: string; line: LatLine }) {
+  const points = useMemo(() => tracePoints(line.buckets, 100, scopeY), [line.buckets]);
+  const pulses = useMemo(() => lossMarks(line.buckets), [line.buckets]);
+  const heat = useMemo(() => line.buckets.map(heatOf), [line.buckets]);
+  const tones = useMemo(() => line.buckets.map((bucket) => TONE_COLOR[lossTone(bucket)]), [line.buckets]);
+  const traceId = useSvgId();
+  const railId = useSvgId();
+  const color = latencyHeatColor(line.value);
+  return (
+    <div className="lc-lat-scope">
+      <LineName uuid={uuid} line={line} />
+      <span className="lc-scope-box" style={{ "--lat": color } as CSSProperties}>
+        <svg viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden>
+          <TimeGradient id={traceId} colors={heat} />
+          <TimeGradient id={railId} colors={tones} />
+          {SCOPE_ZONES.map((zone) => (
+            <rect key={zone.tone} x="0" y={zone.y} width="100" height={zone.h} style={{ fill: zone.tone }} className="lc-scope-zone" />
+          ))}
+          <line x1="25" y1="0" x2="25" y2="30" className="lc-scope-grid" />
+          <line x1="50" y1="0" x2="50" y2="30" className="lc-scope-grid" />
+          <line x1="75" y1="0" x2="75" y2="30" className="lc-scope-grid" />
+          <line x1="0" y1="29" x2="100" y2="29" className="lc-scope-rail" style={{ stroke: `url(#${railId})` }} />
+          {pulses.map((pulse) => (
+            <rect key={pulse.x} x={Math.min(98.4, Math.max(0, pulse.x - 0.8))} y={26 - pulse.level * 12} width="1.6" height={4 + pulse.level * 12} className="lc-loss-mark" data-tone={pulse.tone} />
+          ))}
+          {points.length > 1 ? <polyline points={points.join(" ")} className="lc-scope-trace" style={{ stroke: `url(#${traceId})` }} /> : null}
+        </svg>
+        <span className="lc-scope-ch" aria-hidden>
+          <span style={{ color }}>{t("lat.chLatency")}</span>
+          <span>{t("lat.chLoss")}</span>
+        </span>
+        {line.value != null ? <i className="lc-scope-pointer" style={{ top: `${((scopeY(line.value) / 30) * 100).toFixed(1)}%` }} /> : null}
+      </span>
+      <span className="lc-scope-read">
+        <Ms line={line} />
+        <span className="lc-loss tabular" style={{ color: lossColor(line.loss) }}>
+          <i className="lc-led" style={{ background: line.loss == null ? "var(--progress-bg)" : line.loss > 0 ? lossColor(line.loss) : "var(--status-success)" }} />
+          {lossText(line.loss)}
+        </span>
+      </span>
+    </div>
+  );
+}
+
 function Scope({ uuid, lines }: StyleProps) {
   return (
     <div className="lc-lat-rows is-scope">
-      {lines.map((line) => {
-        const points = tracePoints(line.buckets, 100, scopeY);
-        const pulses = lossMarks(line.buckets);
-        const color = latencyHeatColor(line.value);
-        return (
-          <div key={line.key} className="lc-lat-scope">
-            <LineName uuid={uuid} line={line} />
-            <span className="lc-scope-box" style={{ "--lat": color } as CSSProperties}>
-              <svg viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden>
-                {SCOPE_ZONES.map((zone) => (
-                  <rect key={zone.tone} x="0" y={zone.y} width="100" height={zone.h} style={{ fill: zone.tone }} className="lc-scope-zone" />
-                ))}
-                <line x1="25" y1="0" x2="25" y2="30" className="lc-scope-grid" />
-                <line x1="50" y1="0" x2="50" y2="30" className="lc-scope-grid" />
-                <line x1="75" y1="0" x2="75" y2="30" className="lc-scope-grid" />
-                {pulses.map((pulse) => (
-                  <rect key={pulse.x} x={Math.min(98.4, Math.max(0, pulse.x - 0.8))} y={26 - pulse.level * 12} width="1.6" height={4 + pulse.level * 12} className="lc-loss-mark" data-tone={pulse.tone} />
-                ))}
-                {points.length > 1 ? <polyline points={points.join(" ")} className="lc-scope-trace" /> : null}
-              </svg>
-              <span className="lc-scope-ch" aria-hidden>
-                <span style={{ color }}>{t("lat.chLatency")}</span>
-                <span>{t("lat.chLoss")}</span>
-              </span>
-              {line.value != null ? <i className="lc-scope-pointer" style={{ top: `${((scopeY(line.value) / 30) * 100).toFixed(1)}%` }} /> : null}
-            </span>
-            <span className="lc-scope-read">
-              <Ms line={line} />
-              <span className="lc-loss tabular" style={{ color: lossColor(line.loss) }}>
-                <i className="lc-led" style={{ background: line.loss == null ? "var(--progress-bg)" : line.loss > 0 ? lossColor(line.loss) : "var(--status-success)" }} />
-                {lossText(line.loss)}
-              </span>
-            </span>
-          </div>
-        );
-      })}
+      {lines.map((line) => (
+        <ScopeRow key={line.key} uuid={uuid} line={line} />
+      ))}
     </div>
   );
 }

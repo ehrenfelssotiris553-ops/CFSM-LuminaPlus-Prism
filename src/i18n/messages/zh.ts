@@ -800,8 +800,8 @@ export const zh = {
   "lat.loss": "丢包 {v}",
   "lat.lossShort": "丢 {v}",
   "lat.legend.good": "正常",
-  "lat.legend.warn": "偏慢",
-  "lat.legend.bad": "丢包 / 很慢",
+  "lat.legend.warn": "偏慢 / 丢一点",
+  "lat.legend.bad": "很慢 / 丢得多",
   "lat.setting": "延迟样式",
   "lat.settingSub": "只管 6 种新布局 · 和布局分开选",
   "lat.settingDesc": "6 种新布局的延迟用哪种画法。选「跟随布局」时每种布局用自己配的那种；选了别的，6 种新布局都换成这一种。大卡片、小卡片、迷你卡片、列表这 4 种经典布局不受影响。和首页布局面板里的「延迟样式」是同一个设置。",
@@ -942,6 +942,13 @@ export const zh = {
   "settings.cardAlignDesktopDesc": "同一排卡片拉成一样高，底部那行对齐。关掉是原来各自的高度。",
   "settings.cardAlignMobile": "手机：在线卡片一样高",
   "settings.cardAlignMobileDesc": "手机上一行一张，打开后所有在线卡片和最高的那张一样高，往下翻时整整齐齐。",
+  "quick.cardLayout": "卡片布局",
+  "quick.cardLayoutSub": "跟随风格，或固定一种",
+  "quick.followValue": "跟随 · {layout}",
+  "quick.skinFold": "整体风格",
+  "quick.skinFoldSub": "7 种配色和质感 · 默认流光",
+  "lat.axisLatency": "延",
+  "lat.axisLoss": "丢",
   // @@entries
 } as const;
 

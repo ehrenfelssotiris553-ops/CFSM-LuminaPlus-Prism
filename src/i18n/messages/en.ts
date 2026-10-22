@@ -798,8 +798,8 @@ export const en: Messages = {
   "lat.loss": "Loss {v}",
   "lat.lossShort": "loss {v}",
   "lat.legend.good": "OK",
-  "lat.legend.warn": "Slow",
-  "lat.legend.bad": "Loss / very slow",
+  "lat.legend.warn": "Slow / some loss",
+  "lat.legend.bad": "Very slow / heavy loss",
   "lat.setting": "Latency style",
   "lat.settingSub": "New layouts only · picked separately",
   "lat.settingDesc": "How the six new layouts draw latency. \"Match layout\" lets each layout use its own; any other choice applies to all six. The four classic layouts are unaffected. Same setting as \"Latency style\" in the homepage layout panel.",
@@ -940,5 +940,12 @@ export const en: Messages = {
   "settings.cardAlignDesktopDesc": "Cards in a row get the same height and their bottom lines align. Off keeps each card's own height.",
   "settings.cardAlignMobile": "Phone: online cards same height",
   "settings.cardAlignMobileDesc": "Phones show one card per row; when on, every online card is as tall as the tallest one, so scrolling looks tidy.",
+  "quick.cardLayout": "Card layout",
+  "quick.cardLayoutSub": "Follow the style, or pick one",
+  "quick.followValue": "Following · {layout}",
+  "quick.skinFold": "Style",
+  "quick.skinFoldSub": "7 looks · Lumina by default",
+  "lat.axisLatency": "Lat",
+  "lat.axisLoss": "Loss",
   // @@entries
 };

@@ -977,7 +977,7 @@
 
 .lc-lat {
   /* 丢包图的颜色（风格可以改，见文件末尾）：没丢包是淡绿打底，没数据是轨道色。 */
-  --loss-ok: color-mix(in srgb, var(--status-success) 32%, transparent);
+  --loss-ok: color-mix(in srgb, var(--status-success) 50%, transparent);
   --loss-warn: var(--status-warning);
   --loss-bad: var(--status-error);
   --loss-none: var(--progress-bg);
@@ -1104,8 +1104,10 @@
   white-space: nowrap;
 }
 
+/* 走势线和下面的浅色面积按时间分段上色（渐变在 LatencyStyles 里按每格延迟生成），这里只给透明度。 */
 .lc-spark-fill {
-  fill: color-mix(in srgb, var(--lat) 16%, transparent);
+  fill: var(--lat);
+  fill-opacity: 0.16;
 }
 
 .lc-spark-stroke {
@@ -1178,9 +1180,10 @@
   overflow: visible;
 }
 
+/* 倒影的基线也是一条丢包时间线：没丢包淡绿、没数据灰、丢包黄红。 */
 .lc-loss-base {
   stroke: var(--loss-base);
-  stroke-width: 1;
+  stroke-width: 2;
   vector-effect: non-scaling-stroke;
 }
 
@@ -1218,30 +1221,17 @@
   background: var(--progress-bg);
 }
 
-/* 下面那根细条是丢包率（0～5%），几条线路上下比谁丢得多；没丢包只有开头一个小绿点。 */
+/* 下面一条丢包时间线：每格按那段时间有没有丢包上色（和状态色条下轨同一种画法）。 */
 .lc-cmp-loss {
-  position: relative;
   display: block;
   height: 4px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--progress-bg) 60%, transparent);
-}
-
-.lc-cmp-loss > span {
-  position: absolute;
-  inset: 0 auto 0 0;
-  border-radius: inherit;
-}
-
-.lc-cmp-loss[data-zero]::before {
-  position: absolute;
-  top: -1px;
-  left: 0;
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: var(--status-success);
-  content: "";
+  mask: repeating-linear-gradient(
+    90deg,
+    #000 0,
+    #000 calc((100% + 1px) / var(--n) - 1px),
+    transparent calc((100% + 1px) / var(--n) - 1px),
+    transparent calc((100% + 1px) / var(--n))
+  );
 }
 
 .lc-cmp-band {
@@ -1453,7 +1443,7 @@
 .lc-lat-status {
   display: grid;
   min-width: 0;
-  grid-template-columns: 62px minmax(0, 1fr) 46px 36px;
+  grid-template-columns: 62px auto minmax(0, 1fr) 46px 36px;
   align-items: center;
   gap: 8px;
 }
@@ -1467,7 +1457,18 @@
 }
 
 .lc-status-strip.is-loss {
-  height: 5px;
+  height: 7px;
+}
+
+/* 左边小字标出上下两条各是什么。 */
+.lc-status-axis {
+  display: grid;
+  grid-template-rows: 12px 7px;
+  align-items: center;
+  row-gap: 3px;
+  color: var(--text-tertiary);
+  font-size: 8.5px;
+  line-height: 1;
 }
 
 .lc-status-strip {
@@ -1527,6 +1528,12 @@
 .lc-scope-grid {
   stroke: var(--hairline);
   stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+/* 示波器底部一条丢包时间线。 */
+.lc-scope-rail {
+  stroke-width: 2;
   vector-effect: non-scaling-stroke;
 }
 
@@ -1599,7 +1606,7 @@
   }
 
   .lc-lat-status {
-    grid-template-columns: 54px minmax(0, 1fr) 44px 32px;
+    grid-template-columns: 54px auto minmax(0, 1fr) 44px 32px;
     gap: 6px;
   }
 }
@@ -1687,11 +1694,6 @@
 
 /* ---------- 丢包图跟着风格（颜色、圆角、光效；不用单独设置） ---------- */
 
-:root[data-skin="paper"] .lc-lat {
-  --loss-ok: transparent;
-  --loss-base: var(--text-primary);
-}
-
 :root[data-skin="paper"] .lc-loss-wave > .lc-loss-mark,
 :root[data-skin="terminal"] :is(.lc-loss-wave > .lc-loss-mark, .lc-cmp-loss, .lc-cmp-loss > span) {
   border-radius: 0;
@@ -1713,7 +1715,7 @@
 }
 
 :root[data-skin="collage"] .lc-lat {
-  --loss-ok: color-mix(in srgb, var(--tint-mint) 38%, transparent);
+  --loss-ok: color-mix(in srgb, var(--tint-mint) 55%, transparent);
   --loss-bad: var(--tint-sakura);
 }
 
