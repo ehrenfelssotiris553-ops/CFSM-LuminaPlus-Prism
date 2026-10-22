@@ -151,7 +151,6 @@ export const en: Messages = {
   "viewMode.compact": "Compact cards",
   "viewMode.mini": "Mini cards",
   "viewMode.list": "List",
-  "quick.switchTo": "Switch to {view} for now",
   "appearance.light": "Light",
   "appearance.system": "System",
   "appearance.dark": "Dark",

@@ -1629,6 +1629,11 @@
   grid-auto-rows: 1fr;
 }
 
+/* 每行一样高时，屏幕外的卡片不能先用 420px 占位：等它画出来比占位高，上面所有行都会跟着变高，往下翻时页面会跳。 */
+.node-grid.is-align-all .lc-card {
+  content-visibility: visible;
+}
+
 /* 手机上在线、离线拆成两个网格（NodeGrid），两组之间留和卡片之间一样的空。 */
 .node-grid-groups {
   display: flex;

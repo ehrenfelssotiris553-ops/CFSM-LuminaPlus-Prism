@@ -151,7 +151,6 @@ export const es: Messages = {
   "viewMode.compact": "Tarjetas compactas",
   "viewMode.mini": "Tarjetas mini",
   "viewMode.list": "Lista",
-  "quick.switchTo": "Cambiar a {view} por ahora",
   "appearance.light": "Claro",
   "appearance.system": "Sistema",
   "appearance.dark": "Oscuro",

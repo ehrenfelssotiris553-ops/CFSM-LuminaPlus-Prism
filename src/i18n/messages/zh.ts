@@ -153,7 +153,6 @@ export const zh = {
   "viewMode.compact": "小视图",
   "viewMode.mini": "迷你视图",
   "viewMode.list": "列表视图",
-  "quick.switchTo": "临时切换到{view}",
   "appearance.light": "浅色",
   "appearance.system": "跟随系统",
   "appearance.dark": "深色",
