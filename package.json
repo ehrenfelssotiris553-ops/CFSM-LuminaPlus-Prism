@@ -1,7 +1,7 @@
 {
   "name": "cfsm-theme-lumina-prism",
   "private": true,
-  "version": "2.6.0",
+  "version": "2.6.1",
   "type": "module",
   "description": "CF-Server-Monitor theme, ported from Komari-Theme-LuminaPlus",
   "author": "codex&shark&shanyang",
