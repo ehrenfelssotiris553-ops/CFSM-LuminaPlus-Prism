@@ -145,22 +145,22 @@ jobs:
           # 换成本次产物：删掉除 .git 外的所有旧文件，再整包拷入。
           find "${workdir}" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
           cp -R dist/. "${workdir}/"
+          # 再把前几版还可能被用到的 assets 放回去：后端按 tree/dist 加载主题时会把 index.html 缓存 1 小时，
+          # 这段时间里访客拿到的还是旧 index.html，它会去要旧版本的分包（设置页、详情页等），删了就打不开。
+          # 本次产物和上一版完全一样时脚本输出 same。
+          state="$(node scripts/retain-assets.mjs "${workdir}" dist)"
 
           cd "${workdir}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          if git diff --cached --quiet; then
-            if [ "${FORCE_PUBLISH}" != "true" ]; then
-              echo "产物与上次一致，跳过发布：$(git rev-parse HEAD)"
-              echo "published=false" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            # 只想给商店补一条更新日志时，用同样的产物再发一版。
-            git commit -q --allow-empty -m "${RELEASE_NOTE}"
-          else
-            git commit -q -m "${RELEASE_NOTE}"
+          # 只想给商店补一条更新日志时（force），用同样的产物再发一版。
+          if [ "${state}" = "same" ] && [ "${FORCE_PUBLISH}" != "true" ]; then
+            echo "产物与上次一致，跳过发布：$(git rev-parse HEAD)"
+            echo "published=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          git commit -q --allow-empty -m "${RELEASE_NOTE}"
           git push -q origin "HEAD:${TARGET_BRANCH}"
           echo "已发布到 ${TARGET_BRANCH} 分支：${GITHUB_SHA::7}"
           echo "产物 commit（可用于主题商店 versions[].commitid）：$(git rev-parse HEAD)"
