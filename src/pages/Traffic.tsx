@@ -1,3 +1,5 @@
+// 样式跟着这一页走：v1.2.5 起这页没挂路由，原来放在 styles/index.css 里，首页白下载一整份。
+import "@/styles/traffic-stats.css";
 import { Fragment, Suspense, lazy, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowDown, ArrowUp, ChevronDown, ChevronLeft, RefreshCw } from "lucide-react";

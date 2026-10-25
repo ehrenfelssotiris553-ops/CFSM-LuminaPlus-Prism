@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import { buildSiteThemeOptions } from "@/hooks/useSiteThemeOptions";
+import { buildSiteThemeOptions, unmanagedSiteSettings } from "@/hooks/useSiteThemeOptions";
 import { EMPTY_PING_LINE_OVERRIDES_BY_NODE } from "@/utils/pingLineOverrides";
 import { LOCAL_IP_STACK_EDITS_KEY } from "@/utils/ipStack";
 
@@ -66,5 +66,24 @@ describe("buildSiteThemeOptions", () => {
 
     expect(snapshot.desktopNodeViewMode).toBe("large");
     expect(snapshot.metricColors).toEqual({ cpu: "#333333", disk: "#222222" });
+  });
+});
+
+describe("unmanagedSiteSettings", () => {
+  it("keeps keys this theme does not manage and drops the ones it rewrites", () => {
+    expect(
+      unmanagedSiteSettings({
+        mikus: { enabled: false },
+        skin: "paper",
+        screenshotMaskNodes: ["a"],
+        surfaceOpacity: 60,
+        metricColors: { cpu: "#111111" },
+        darkDepth: 60,
+        showCostSummaryFloatingButton: true,
+        luminaplusSyncedAt: 1,
+        [LOCAL_IP_STACK_EDITS_KEY]: { a: { ipv4: true } },
+      }),
+    ).toEqual({ mikus: { enabled: false } });
+    expect(unmanagedSiteSettings(undefined)).toEqual({});
   });
 });

@@ -418,6 +418,31 @@ describe("详情页只订阅正在看的这一台", () => {
     await vi.advanceTimersByTimeAsync(0);
   });
 
+  it("keeps the detail page's single-server refresh when it was put off by scrolling", async () => {
+    mocks.getServersSnapshot.mockImplementation(async () => snapshot(["node-a", "node-b"]));
+    const store = await loadStore();
+    const release = store.retainStore();
+    await vi.advanceTimersByTimeAsync(0);
+    const leave = store.focusRealtimeNode("node-b");
+
+    // 切回前台时手指正在划屏：补数据推迟到停手后再发，推迟了也还是只补这一台。
+    setHidden(true);
+    window.dispatchEvent(new Event("scroll"));
+    setHidden(false);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mocks.getServerSnapshot).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(syncCount()).toBe(1);
+    expect(mocks.getServerSnapshot).toHaveBeenCalledTimes(1);
+    expect(mocks.getServerSnapshot.mock.calls[0]![0]).toBe("node-b");
+    expect(nodeIds(store)).toEqual(["node-a", "node-b"]);
+
+    leave();
+    release();
+    await vi.advanceTimersByTimeAsync(0);
+  });
+
   it("loads only that one server when the detail page is opened directly, then the full list back on home", async () => {
     mocks.getServersSnapshot.mockImplementation(async () => snapshot(["node-a", "node-b"]));
     const store = await loadStore();

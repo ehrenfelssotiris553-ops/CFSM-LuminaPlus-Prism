@@ -577,7 +577,9 @@ function markScrollActivity() {
     scrollActive = false;
     if (refreshDeferredWhileScrolling) {
       refreshDeferredWhileScrolling = false;
-      void syncServers();
+      // 按当前页面补：原来这里一律拉全站，详情页切回前台时正好在划屏就会多查一次 `/api/servers`
+      // （后端主题规范：详情页只查单台）。推迟期间页面又进了后台就不补了，回到前台时会再补一次。
+      if (started && !realtimePaused()) void syncCurrentScope().catch(() => {});
     }
   }, SCROLL_IDLE_DELAY_MS);
 }

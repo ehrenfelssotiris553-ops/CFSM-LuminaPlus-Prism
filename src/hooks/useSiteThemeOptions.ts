@@ -26,11 +26,18 @@ import {
   type PingLineOverridesByNode,
 } from "@/utils/pingLineOverrides";
 import {
+  DEFAULT_THEME_SETTINGS,
   normalizeThemeSettings,
   mergeThemeSettingsLayers,
   withPreferredAppearance,
   type Appearance,
 } from "@/utils/themeSettings";
+import { LOCAL_IP_STACK_EDITS_KEY } from "@/utils/ipStack";
+import {
+  LOCAL_PING_GROUP_EDITS_KEY,
+  LOCAL_PING_PROTOCOL_EDITS_KEY,
+  LOCAL_PING_VISIBILITY_EDITS_KEY,
+} from "@/utils/pingVisibility";
 
 export interface SiteThemeOptionsSources {
   /** 后端当前的 theme_options（站点预设）。 */
@@ -77,6 +84,41 @@ export function buildSiteThemeOptions({
   };
 }
 
+/**
+ * 这个主题自己管的键：保存时由 {@link buildSiteThemeOptions} 按白名单重新写出来。
+ * 配色两项不在 normalizeThemeSettings 里（见 pickPaletteSettings），`showCostSummaryFloatingButton` 是读的时候并进
+ * showCostSummary 的老开关 —— 原样留着的话，关掉资产入口它还会把入口顶回来。
+ */
+const MANAGED_SITE_KEYS = new Set<string>([
+  ...Object.keys(DEFAULT_THEME_SETTINGS),
+  "metricColors",
+  "darkDepth",
+  "showCostSummaryFloatingButton",
+  SITE_SYNC_MARKER_KEY,
+  LOCAL_IP_STACK_EDITS_KEY,
+  LOCAL_PING_VISIBILITY_EDITS_KEY,
+  LOCAL_PING_GROUP_EDITS_KEY,
+  LOCAL_PING_PROTOCOL_EDITS_KEY,
+]);
+
+/**
+ * 后端 theme_options 里这个主题不管的键（IPStack 版以后加的设置、别的主题的设置），保存时原样带回去。
+ *
+ * 保存是整份替换：不带上它们，站长在这里改一个开关，别的主题的设置就全没了 —— 两个主题共用同一份站点设置，
+ * IPStack 版原来就是这样把这边的风格、新布局、打码设置冲掉的（ipstack.15 修了），这边也一样处理。
+ * 只在发给后端和导出时并进去；判断「本主题的设置变没变」（冲突、要不要发、备份）仍只看 {@link buildSiteThemeOptions}。
+ */
+export function unmanagedSiteSettings(
+  siteSettings: Record<string, unknown> | undefined,
+): Record<string, unknown> {
+  if (!siteSettings) return {};
+  return Object.fromEntries(
+    Object.entries(siteSettings).filter(
+      ([key]) => key !== "__proto__" && !MANAGED_SITE_KEYS.has(key),
+    ),
+  );
+}
+
 /** 当前设备的站点快照（未登录时「复制配置 JSON」导出的就是它）。 */
 export function useSiteThemeOptions(draftSettings?: ThemeSettings) {
   const { data: config } = usePublicConfig();
@@ -84,14 +126,17 @@ export function useSiteThemeOptions(draftSettings?: ThemeSettings) {
   const localLineOverrides = useAllPingLineOverrides();
 
   const snapshot = useMemo(
-    () =>
-      buildSiteThemeOptions({
+    () => ({
+      // 粘回后台是整份替换，别的主题的设置也要跟着导出，见 unmanagedSiteSettings。
+      ...unmanagedSiteSettings(config?.theme_settings),
+      ...buildSiteThemeOptions({
         siteSettings: config?.theme_settings,
         preferredAppearance: config?.preferredAppearance,
         localSettings,
         draftSettings,
         localLineOverrides,
       }),
+    }),
     [
       config?.preferredAppearance,
       config?.theme_settings,
@@ -247,6 +292,7 @@ async function runSync() {
     allowConflictOnce = false;
     if (!sameJson(snapshot, buildSiteThemeOptions(site)) || config.pingDisplayMigration === true) {
       const { theme_options: saved } = await saveThemeOptions({
+        ...unmanagedSiteSettings(config.theme_settings),
         ...snapshot,
         [SITE_SYNC_MARKER_KEY]: Date.now(),
       });
