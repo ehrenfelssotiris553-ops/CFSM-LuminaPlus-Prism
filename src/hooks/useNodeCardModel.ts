@@ -4,6 +4,7 @@ import { useHourlyClock, useMinuteClock } from "@/hooks/useClock";
 import { useNodeCardSnapshots, useShowThreeNetDetails, useSiteBillingSwitches } from "@/hooks/useNode";
 import {
   buildPingBuckets,
+  lossFromBuckets,
   useNodeMultiPingTaskIds,
   useNodePingOverview,
   useNodePingOverviewLines,
@@ -115,16 +116,15 @@ export function useNodeCardModel(
     [homepagePingBindings, multiPingActive, uuid],
   );
   const now = useHourlyClock();
-  const ping = realPing;
   // 状态跟随每条任务数据进入 Store,不再订阅全局 isRefreshing。这样后台轮询开始/结束
   // 时不会让所有节点卡片仅因一个布尔值变化而重渲染。
   const pingLoading =
-    hasRealHomepagePingBinding && (ping.loadState ?? "pending") === "pending";
+    hasRealHomepagePingBinding && (realPing.loadState ?? "pending") === "pending";
   const pingError =
-    hasRealHomepagePingBinding && ping.loadState === "error";
+    hasRealHomepagePingBinding && realPing.loadState === "error";
   const shouldRenderPingBars = shouldRenderHomepagePingBars(
     hasRealHomepagePingBinding,
-    ping.isAssigned,
+    realPing.isAssigned,
   );
   // 掉线后延迟/丢包柱按最后一次上报截断，之后的格子涂红。用 `updatedAt` 而不是
   // 「发现掉线的时刻」：前者是节点真正停止上报的时间，红色从那里开始才对得上。
@@ -138,12 +138,20 @@ export function useNodeCardModel(
   const carrierNames = useCarrierNames();
   // 后端关掉三网详情时 `servers[].ping` / `loss` 窗口是空的：后端主题规范要求这时不展示首页小图，
   // 不拿实时样本自己攒一份顶上。单线路的当前延迟 / 丢包数值照常显示，只是不画柱子。
+  const singleBucketsOn = !multiPingActive && showThreeNetDetails;
   const pingBuckets = usePingBuckets(
-    ping,
+    realPing,
     pingBucketCount,
-    !multiPingActive && showThreeNetDetails,
+    singleBucketsOn,
     offlineSince,
     latencyWindowMs,
+  );
+  // 卡片上的丢包率从柱子算，不用缓冲区整段的平均：缓冲区比柱子多留 15 分钟（SAMPLE_TTL_MS），
+  // 那段的丢包算进数字、却不在任何一根柱子里，就成了「4.3% 发黄、20 根柱子全绿」（站长 2026-10-24 截图）。
+  // 三网详情关了不画柱子（pingBuckets 是空的），这时数字照旧用缓冲区的，不拿空柱子把它抹成「—」。
+  const ping = useMemo(
+    () => (singleBucketsOn ? { ...realPing, loss: lossFromBuckets(pingBuckets) } : realPing),
+    [pingBuckets, realPing, singleBucketsOn],
   );
   // 与 usePingBuckets 同理:窗口按分钟前移,不依赖数据刷新才滑动。
   const bucketNow = useMinuteClock(multiPingActive);
@@ -172,17 +180,15 @@ export function useNodeCardModel(
           max: 1,
           loss: null,
         };
-      return [{
-        ...line,
-        slot,
-        buckets: buildPingBuckets(
-          line,
-          pingBucketCount,
-          bucketNow,
-          offlineSince,
-          latencyWindowMs,
-        ),
-      }];
+      const buckets = buildPingBuckets(
+        line,
+        pingBucketCount,
+        bucketNow,
+        offlineSince,
+        latencyWindowMs,
+      );
+      // 每行的丢包率同样从这一行的柱子算，理由见上面的 `ping`。
+      return [{ ...line, slot, buckets, loss: lossFromBuckets(buckets) }];
     });
   }, [
     showPingIpv4, showPingIpv6, homepagePingGroupOverrides, homepagePingProtocols, homepagePingVisibilityOverrides,
