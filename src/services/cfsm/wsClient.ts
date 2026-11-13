@@ -16,12 +16,21 @@ const PING_INTERVAL_MS = 30_000;
 const RECONNECT_BASE_DELAY_MS = 1_000;
 const RECONNECT_MAX_DELAY_MS = 30_000;
 /**
- * 连续重连这么多次都没连上就停手（1、2、4、8、16、30、30… 秒，合计约 3 分钟）。
+ * 快速重连的次数（1、2、4、8、16、30、30… 秒，合计约 3 分钟）。
  *
- * 后端主题规范：重连要指数退避、封顶、限制最大次数。停手后页面保留最后一次数据；用户切到别处再切回来
- * （wsStore 隐藏时关连接、回来重建）或刷新页面会从头再试。连上过一次就重新计数。
+ * 后端主题规范：重连要指数退避、封顶、限制最大次数。连上过一次就重新计数。
  */
 export const RECONNECT_MAX_ATTEMPTS = 10;
+/**
+ * 快速重连用完后，再每 5 分钟试一次、最多这么多次（约半小时），之后才真正停手。
+ *
+ * 原来 3 分钟没连上就永久停手：电脑断网一会儿、路由器重启、后端发版，回来以后页面一直停在旧数据上，
+ * 而实时没连着时也不判离线，挂掉的节点照样显示在线（站长 2026-11-13 全面检查时查出来的，挂在屏幕上当看板最容易遇到）。
+ * 次数仍然有上限，符合规范；浏览器报「重新联网」时另外立刻重连（见 `createWsConnection` 里的 online 监听）。
+ * 真正停手后，切到别处再切回来（wsStore 隐藏时关连接、回来重建）或刷新页面会从头再试。
+ */
+export const RECONNECT_SLOW_ATTEMPTS = 6;
+export const RECONNECT_SLOW_DELAY_MS = 5 * 60_000;
 /** 服务端因参数非法主动关闭，重连不会有不同结果。 */
 const POLICY_VIOLATION_CLOSE_CODE = 1008;
 
@@ -138,6 +147,7 @@ export function createWsConnection(
   let pingTimer: number | null = null;
   let reconnectTimer: number | null = null;
   let reconnectAttempts = 0;
+  /** 调用方关掉了、或服务端 1008 拒绝：再也不连。 */
   let closed = false;
   let available = false;
 
@@ -167,15 +177,19 @@ export function createWsConnection(
 
   function scheduleReconnect() {
     if (closed || reconnectTimer != null) return;
-    if (reconnectAttempts >= RECONNECT_MAX_ATTEMPTS) {
-      console.warn(`[LuminaPlus] WebSocket 连续 ${RECONNECT_MAX_ATTEMPTS} 次没连上，不再重试：${base}`);
-      closed = true;
+    if (reconnectAttempts >= RECONNECT_MAX_ATTEMPTS + RECONNECT_SLOW_ATTEMPTS) {
+      console.warn(
+        `[LuminaPlus] WebSocket 连续 ${RECONNECT_MAX_ATTEMPTS + RECONNECT_SLOW_ATTEMPTS} 次没连上，不再重试（重新联网或切回页面时再试）：${base}`,
+      );
       return;
     }
-    const delay = Math.min(
-      RECONNECT_MAX_DELAY_MS,
-      RECONNECT_BASE_DELAY_MS * 2 ** Math.min(reconnectAttempts, 5),
-    );
+    const delay =
+      reconnectAttempts >= RECONNECT_MAX_ATTEMPTS
+        ? RECONNECT_SLOW_DELAY_MS
+        : Math.min(
+          RECONNECT_MAX_DELAY_MS,
+          RECONNECT_BASE_DELAY_MS * 2 ** Math.min(reconnectAttempts, 5),
+        );
     reconnectAttempts += 1;
     reconnectTimer = window.setTimeout(() => {
       reconnectTimer = null;
@@ -231,12 +245,28 @@ export function createWsConnection(
         // 订阅参数被服务端拒绝，重连只会重复失败：停手，页面保留已有数据。
         console.warn(`[LuminaPlus] WebSocket 订阅被拒绝 (1008)，不再重连：${base}`);
         closed = true;
+        window.removeEventListener("online", handleOnline);
         return;
       }
       scheduleReconnect();
     };
   }
 
+  /**
+   * 浏览器报「重新联网」：没连着就立刻重连，重新计数（等退避或已经停手的都算）。
+   * 这是事件触发的一次重连，不是定时循环；断网期间的失败把次数用光了，联网后也能马上接上。
+   */
+  function handleOnline() {
+    if (closed || socket) return;
+    if (reconnectTimer != null) {
+      window.clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    reconnectAttempts = 0;
+    connect();
+  }
+
+  window.addEventListener("online", handleOnline);
   connect();
 
   return {
@@ -250,6 +280,7 @@ export function createWsConnection(
     },
     close() {
       closed = true;
+      window.removeEventListener("online", handleOnline);
       clearTimers();
       const current = socket;
       socket = null;

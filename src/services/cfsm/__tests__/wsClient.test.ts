@@ -4,6 +4,8 @@ import {
   buildWsUrl,
   createWsConnection,
   RECONNECT_MAX_ATTEMPTS,
+  RECONNECT_SLOW_ATTEMPTS,
+  RECONNECT_SLOW_DELAY_MS,
   type WsSample,
 } from "@/services/cfsm/wsClient";
 
@@ -47,7 +49,11 @@ beforeEach(() => {
   vi.stubGlobal("WebSocket", FakeSocket);
 });
 
+// 每条连接都在 window 上挂了 online 监听：用例结束统一关掉，免得上一条用例的连接响应下一条用例的 online。
+const openConnections: { close(): void }[] = [];
+
 afterEach(() => {
+  for (const connection of openConnections.splice(0)) connection.close();
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
@@ -59,6 +65,7 @@ function connect(ids: string[]) {
     onBatch: (samples) => batches.push(samples),
     onAvailabilityChange: (available) => availability.push(available),
   });
+  openConnections.push(connection);
   return { connection, batches, availability, socket: () => FakeSocket.instances.at(-1)! };
 }
 
@@ -200,19 +207,74 @@ describe("createWsConnection", () => {
     expect(FakeSocket.instances).toHaveLength(2);
   });
 
-  it("gives up after RECONNECT_MAX_ATTEMPTS failed reconnects, and starts counting again once it has connected", () => {
+  it("after the fast retries run out, tries every 5 minutes a few more times, then stops", () => {
     const { socket } = connect(["a"]);
     socket().open();
     socket().onclose?.({ code: 1006 });
-    // 每次重连都连不上：指数退避到 30 秒封顶，满 10 次停手。
+    // 快速重连：指数退避到 30 秒封顶，满 10 次。
     for (let attempt = 0; attempt < RECONNECT_MAX_ATTEMPTS; attempt += 1) {
       vi.advanceTimersByTime(30_000);
       socket().onclose?.({ code: 1006 });
     }
+    expect(FakeSocket.instances).toHaveLength(1 + RECONNECT_MAX_ATTEMPTS);
+    // 之后不再 30 秒一次，而是 5 分钟一次。
+    vi.advanceTimersByTime(RECONNECT_SLOW_DELAY_MS - 1);
+    expect(FakeSocket.instances).toHaveLength(1 + RECONNECT_MAX_ATTEMPTS);
+    vi.advanceTimersByTime(1);
+    expect(FakeSocket.instances).toHaveLength(2 + RECONNECT_MAX_ATTEMPTS);
+    socket().onclose?.({ code: 1006 });
+    for (let attempt = 1; attempt < RECONNECT_SLOW_ATTEMPTS; attempt += 1) {
+      vi.advanceTimersByTime(RECONNECT_SLOW_DELAY_MS);
+      socket().onclose?.({ code: 1006 });
+    }
+    // 次数有上限（后端主题规范）：用完就停，不再定时试。
     const afterGiveUp = FakeSocket.instances.length;
-    expect(afterGiveUp).toBe(1 + RECONNECT_MAX_ATTEMPTS);
-    vi.advanceTimersByTime(10 * 60_000);
+    expect(afterGiveUp).toBe(1 + RECONNECT_MAX_ATTEMPTS + RECONNECT_SLOW_ATTEMPTS);
+    vi.advanceTimersByTime(24 * 60 * 60_000);
     expect(FakeSocket.instances).toHaveLength(afterGiveUp);
+  });
+
+  it("reconnects at once when the browser comes back online, even after giving up", () => {
+    const { socket } = connect(["a"]);
+    socket().open();
+    socket().onclose?.({ code: 1006 });
+    for (let attempt = 0; attempt < RECONNECT_MAX_ATTEMPTS + RECONNECT_SLOW_ATTEMPTS; attempt += 1) {
+      vi.advanceTimersByTime(RECONNECT_SLOW_DELAY_MS);
+      socket().onclose?.({ code: 1006 });
+    }
+    const afterGiveUp = FakeSocket.instances.length;
+    vi.advanceTimersByTime(60 * 60_000);
+    expect(FakeSocket.instances).toHaveLength(afterGiveUp);
+
+    window.dispatchEvent(new Event("online"));
+    expect(FakeSocket.instances).toHaveLength(afterGiveUp + 1);
+
+    // 重新计数：这次又断了，照快速重连的节奏来（1 秒后）。
+    socket().onclose?.({ code: 1006 });
+    vi.advanceTimersByTime(1_000);
+    expect(FakeSocket.instances).toHaveLength(afterGiveUp + 2);
+  });
+
+  it("does not open a second socket on online while one is already there", () => {
+    const { socket } = connect(["a"]);
+    socket().open();
+    window.dispatchEvent(new Event("online"));
+    expect(FakeSocket.instances).toHaveLength(1);
+  });
+
+  it("ignores online after the caller closed it or the server rejected the subscription", () => {
+    const closedByCaller = connect(["a"]);
+    closedByCaller.socket().open();
+    closedByCaller.connection.close();
+    const rejected = connect(["b"]);
+    rejected.socket().open();
+    rejected.socket().onclose?.({ code: 1008 });
+    const before = FakeSocket.instances.length;
+
+    window.dispatchEvent(new Event("online"));
+    vi.advanceTimersByTime(60 * 60_000);
+
+    expect(FakeSocket.instances).toHaveLength(before);
   });
 
   it("resets the attempt count after a successful reconnect", () => {
