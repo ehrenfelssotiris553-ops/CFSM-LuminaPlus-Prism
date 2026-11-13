@@ -14,6 +14,7 @@ import { useNodeCardModel } from "@/hooks/useNodeCardModel";
 import {
   HOMEPAGE_PING_BUCKET_COUNT,
   buildPingBuckets,
+  lossFromBuckets,
   useNodeAvailablePingLines,
   useNodeMultiPingTaskIds,
   withLiveLatency,
@@ -465,7 +466,8 @@ function useDetailLines(uuid: string, livePing: CarrierPingSnapshot | null, offl
         name: line.taskName,
         short: shortLineName(line.taskName),
         value: withLiveLatency(line, livePing, line.taskId).lastValue,
-        loss: line.loss,
+        // 丢包率从这一行的柱子算，和首页卡片一致：缓冲区比柱子多留 15 分钟，那段的丢包不在任何一根柱子里。
+        loss: lossFromBuckets(bucketsByLine[index] ?? []),
         buckets: bucketsByLine[index],
       })),
     [bucketsByLine, livePing, raw],
