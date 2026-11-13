@@ -249,7 +249,7 @@ export const SiteConfigSchema = z
     display_mode: looseString.default(""),
     /** 后台「外观设置 → 默认外观」：auto / dark / light。主题设置没写默认外观时拿它垫底。 */
     preferred_theme: looseString.default(""),
-    /** 后台「外观设置 → 默认语言」：auto / zh / en / es。主题的界面语言跟着它走，见 i18n 的 `resolveLanguage`。 */
+    /** 后台「外观设置 → 默认语言」：auto / zh / zh-TW / en / ja / id / fr / es（后端 2.8.7 起）。主题的界面语言跟着它走，见 i18n 的 `resolveLanguage`。 */
     default_language: looseString.default(""),
     theme_options: z.record(z.string(), z.unknown()).default({}),
     verified: z.boolean().default(false),

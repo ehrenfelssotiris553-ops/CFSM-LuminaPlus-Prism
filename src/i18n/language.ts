@@ -24,9 +24,14 @@ function browserLanguages(): readonly string[] {
  */
 const BACKEND_LANGUAGE_STORAGE_KEY = "language_preference";
 
+/**
+ * 后端 2.8.7 起界面语言有 7 种（`src/shared/languages.js`）：多出来的繁体中文 `zh-TW` 按中文显示 ——
+ * 不然站点默认语言设成繁体时，浏览器不是中文的访客会看到英文。日语、印尼语、法语没有词典，认不出就按 auto 走。
+ */
 function asLanguage(value: unknown): Language | null {
   const normalized = String(value ?? "").trim().toLowerCase();
-  return normalized === "zh" || normalized === "en" || normalized === "es" ? normalized : null;
+  if (normalized === "zh" || normalized.startsWith("zh-")) return "zh";
+  return normalized === "en" || normalized === "es" ? normalized : null;
 }
 
 /** 访客在后端自带前端里亲手选过的语言；没选过（或存的是 auto、读不到）返回 null。 */

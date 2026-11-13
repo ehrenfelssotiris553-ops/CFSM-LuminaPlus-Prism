@@ -20,6 +20,15 @@ describe("resolveLanguage", () => {
     expect(resolveLanguage("es", ["zh-CN"])).toBe("es");
   });
 
+  it("shows Traditional Chinese sites in Chinese, not by the browser", () => {
+    // 后端 2.8.7 起站点默认语言可以是 zh-TW；没有繁体词典，按中文显示，不退回英文。
+    expect(resolveLanguage("zh-TW", ["en-US"])).toBe("zh");
+    expect(resolveLanguage("auto", ["en-US"], null)).toBe("en");
+    // 后端新加的日语、印尼语、法语没有词典：按 auto，看浏览器。
+    expect(resolveLanguage("ja", ["en-US"])).toBe("en");
+    expect(resolveLanguage("fr", ["zh-CN"])).toBe("zh");
+  });
+
   it("follows the browser for auto, like the built-in theme", () => {
     expect(resolveLanguage("auto", ["es-MX", "en"])).toBe("es");
     expect(resolveLanguage("auto", ["zh-TW"])).toBe("zh");
@@ -80,6 +89,9 @@ describe("backend language preference", () => {
     expect(readBackendLanguagePreference()).toBeNull();
     window.localStorage.setItem("language_preference", "EN");
     expect(readBackendLanguagePreference()).toBe("en");
+    // 访客在内置前端选了繁体中文：按中文。
+    window.localStorage.setItem("language_preference", "zh-TW");
+    expect(readBackendLanguagePreference()).toBe("zh");
     // 存的是 auto：等于没选，交给站点默认。
     window.localStorage.setItem("language_preference", "auto");
     expect(readBackendLanguagePreference()).toBeNull();
