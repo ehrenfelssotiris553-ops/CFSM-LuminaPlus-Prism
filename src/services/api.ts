@@ -36,6 +36,8 @@ import {
   historyRowsToPingRecords,
   historyRowsToPingSamples,
   inferIntervalSeconds,
+  MAX_FUTURE_CLOCK_SKEW_MS,
+  normalizeTimestamp,
   toNodeInfo,
   withReportTimestamp,
 } from "@/services/cfsm/mappers";
@@ -489,8 +491,13 @@ async function requestHistoryRows(
     ...options,
     base: options?.base ?? getServerApiBase(serverId),
   });
+  // 历史行的时间是探针按节点自己的时钟打的。时钟快了的那几行落在将来，画出来只剩一个对不上的点、横轴也被撑歪，
+  // 丢掉（原版 v1.2.23：节点重启后时钟跳快 8 小时，关机后详情页「覆盖 17:33 - 17:33」）。
+  const latest = Date.now() + MAX_FUTURE_CLOCK_SKEW_MS;
   // 后端按时间倒序或正序都可能，图表要求升序。
-  return [...rows].sort((left, right) => left.timestamp - right.timestamp);
+  return rows
+    .filter((row) => normalizeTimestamp(row.timestamp) <= latest)
+    .sort((left, right) => left.timestamp - right.timestamp);
 }
 
 /**
