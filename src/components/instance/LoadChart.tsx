@@ -19,7 +19,9 @@ import { InstancePanel, InstanceChartLoading } from "./InstancePanel";
 import {
   buildChartTooltipHooks,
   SPARSE_SERIES_POINTS,
+  axisDecimals,
   chartAlpha,
+  zeroBasedTicks,
   createTimeAxisFormatter,
   formatChartCoverageTime,
   getAxisColors,
@@ -230,13 +232,6 @@ function formatTooltipValue(key: string, value: number | null | undefined, unit:
   return value.toFixed(2);
 }
 
-function formatPercentAxisValue(value: number, min: number, max: number) {
-  const span = Math.abs(max - min);
-  if (span < 0.5) return `${value.toFixed(2)}%`;
-  if (span < 5) return `${value.toFixed(1)}%`;
-  return `${Math.round(value)}%`;
-}
-
 function formatNetworkAxisValue(value: number) {
   if (!Number.isFinite(value) || value <= 0) return "";
   return formatTrafficRateLabel(value);
@@ -245,12 +240,6 @@ function formatNetworkAxisValue(value: number) {
 function formatByteRateAxisValue(value: number) {
   if (!Number.isFinite(value) || value <= 0) return "";
   return formatByteRateLabel(value);
-}
-
-function formatCountAxisValue(value: number, min: number, max: number) {
-  const span = Math.abs(max - min);
-  if (span < 10) return value.toFixed(1);
-  return `${Math.round(value)}`;
 }
 
 /**
@@ -268,6 +257,18 @@ const SPLINE_PATHS = uPlot.paths.spline?.();
  * （站长 2026-10-14 要求对齐）。别再按图单独给宽度。
  */
 const LOAD_Y_AXIS_SIZE = 78;
+
+type LoadAxisKind = "percent" | "network" | "byteRate" | "count" | "integer";
+
+/** 纵轴范围：下限固定 0，上限取数据最大值留一点余量并取整；全是 0 或没数据时给 0~1。百分比不超过 100。 */
+function zeroBasedYRange(max: number | null, axisKind: LoadAxisKind): uPlot.Range.MinMax {
+  const top = max != null && Number.isFinite(max) && max > 0 ? max : 1;
+  const padded = uPlot.rangeNum(0, top, 0.1, true)[1] ?? top;
+  if (axisKind === "percent" && top <= 100) return [0, Math.min(padded, 100)];
+  // 整数轴至少到 2，0 以上才放得下 1、2 两档。
+  if (axisKind === "integer") return [0, Math.max(padded, 2)];
+  return [0, padded];
+}
 
 // 不含尺寸的配置。width/height 由调用方在另一个 memo 里加上，resize 时只改这两个 key，
 // uplot-react 就会调 setSize() 而不是重建整个 chart。(用普通函数而非 hook——它不调任何
@@ -290,7 +291,7 @@ function buildBaseOptions({
   resolvedAppearance: "light" | "dark";
   rangeHours: number;
   spanGaps?: boolean;
-  axisKind: "percent" | "network" | "byteRate" | "count";
+  axisKind: LoadAxisKind;
   /**
    * 历史档钉住的横轴区间，传取值函数而不是区间本身：实时样本每接上一个，区间右端就往后推一次，
    * 区间要是进了 options，uplot-react 比出 options 变了就把整张图销毁重建（每一两秒六张图全部重画）。
@@ -321,7 +322,12 @@ function buildBaseOptions({
       x: getXRange
         ? { time: true, auto: false, range: (_self, min, max) => getXRange() ?? [min, max] }
         : { time: true },
-      y: { auto: true },
+      // 纵轴一律从 0 起（和 Ping 图一样，站长 2026-10-19）：原来按数据上下限自动取，
+      // 负载 0.3~0.6、连接数 10~15 这种小波动会被拉满整个图高，看着像大起大落。
+      y: {
+        auto: true,
+        range: (_self, _min, max) => zeroBasedYRange(max, axisKind),
+      },
     },
     axes: [
       {
@@ -336,15 +342,20 @@ function buildBaseOptions({
         grid: { stroke: grid, width: 1 },
         ticks: { stroke: grid },
         size: LOAD_Y_AXIS_SIZE,
-        values: (self, splits) => {
-          const min = Number(self.scales.y.min ?? 0);
-          const max = Number(self.scales.y.max ?? 0);
+        // 刻度自己算：从 0 起、0 以上至少两档；进程数、连接数只取整数（原来跨度 1 时出「186.5」，站长 2026-10-16 截图）。
+        splits: (_self, _axisIdx, _min, max) =>
+          zeroBasedTicks(max, {
+            integer: axisKind === "integer",
+            unit: axisKind === "network" ? "bits" : axisKind === "byteRate" ? "binary" : "decimal",
+          }),
+        values: (_self, splits) => {
+          const decimals = axisDecimals(splits);
           return splits.map((value) => {
             if (value === 0 && axisKind !== "percent") return "";
             if (axisKind === "network") return formatNetworkAxisValue(value);
             if (axisKind === "byteRate") return formatByteRateAxisValue(value);
-            if (axisKind === "percent") return formatPercentAxisValue(value, min, max);
-            return formatCountAxisValue(value, min, max);
+            if (axisKind === "percent") return `${value.toFixed(decimals)}%`;
+            return value.toFixed(decimals);
           });
         },
       },
@@ -404,7 +415,7 @@ const ChartCard = memo(function ChartCard({
   rangeHours: number;
   unit?: string;
   spanGaps?: boolean;
-  axisKind: "percent" | "network" | "byteRate" | "count";
+  axisKind: LoadAxisKind;
   xRange?: [number, number] | null;
   fillAllSeries?: boolean;
   /** 卡片边框/图标的主色。默认跟随第一条线，指标本身有固定色时用它覆盖。 */
@@ -960,7 +971,7 @@ export function LoadChart({
           resolvedAppearance={resolvedAppearance}
           rangeHours={hours}
           spanGaps={connectNulls}
-          axisKind="count"
+          axisKind="integer"
           xRange={requestedXRange}
         />
         <ChartCard
@@ -981,7 +992,7 @@ export function LoadChart({
           resolvedAppearance={resolvedAppearance}
           rangeHours={hours}
           spanGaps={connectNulls}
-          axisKind="count"
+          axisKind="integer"
           xRange={requestedXRange}
         />
       </div>
