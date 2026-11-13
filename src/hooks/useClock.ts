@@ -5,7 +5,7 @@ interface ClockStore {
   getSnapshot: () => number;
 }
 
-function createClockStore(intervalMs: number): ClockStore {
+export function createClockStore(intervalMs: number): ClockStore {
   const listeners = new Set<() => void>();
   let snapshot = Date.now();
   let bucket = Math.floor(snapshot / intervalMs);
@@ -50,7 +50,16 @@ function createClockStore(intervalMs: number): ClockStore {
         }
       };
     },
+    // 读的时候也看一眼跨没跨分钟：页面在后台（手机切走、电脑睡眠、浏览器冻结标签页）时定时器不跑，
+    // 回到前台实时数据马上就到、卡片跟着重画，这时还拿进后台那一刻的时间去比，
+    // 每张卡都会显示「节点时间超前」，要等下一次定时器才消失（站长 2026-11-13）。
+    // 同一分钟里读几次都是同一个值，useSyncExternalStore 要的快照稳定不受影响。
     getSnapshot() {
+      if (listeners.size > 0 && refresh()) {
+        queueMicrotask(() => {
+          for (const listener of listeners) listener();
+        });
+      }
       return snapshot;
     },
   };
